@@ -22,9 +22,12 @@ controladdin "CB HTML5"
     event finish2(finish: JsonObject);
     event fermerModal(finish: JsonObject);
     event CheckCAB(cab: JsonObject);
+    event remplirqte2(cab: JsonObject);
+
     procedure Render(HTML: Text);
     procedure WhenLoaded();
     procedure rempliremp(value: text);
+    procedure remplirqte(value: text);
 
     procedure cabnonvalide();
     procedure ViderCAB();

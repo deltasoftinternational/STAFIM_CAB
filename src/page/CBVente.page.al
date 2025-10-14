@@ -218,33 +218,71 @@ page 76000 "CB Vente"
                         Message('Veuillez affecter l''utilisateur');
                 end;
 
+                trigger remplirqte2(cab: JsonObject)
+                var
+                    cabq: text;
+                    cabq_token: JsonToken;
+                    scan: record "CB historique scan";
+                    total_quantity: Decimal;
+
+
+
+                begin
+                    cab.SelectToken('cabq', cabq_token);
+                    cabq_token.WriteTo(cabq);
+                    cabq := cabq.Replace('"', '');
+                    Evaluate(QuantityItem, cabq);
+
+                    scan.Reset();
+                    scan.SetRange("Document Type", scan."Document Type"::Vente);
+                    scan.SetRange("Document No.", cmdSave);
+                    scan.setrange(article, item_no_text);
+                    scan.setrange(Magasin, magsave);
+                    if role <> 'COL' then
+                        scan.setrange(Emplacement, emplacement);
+                    scan.setrange(Cancelled, false);
+                    total_quantity := 0;
+                    old_quantity := 0;
+                    if scan.findset() then begin
+                        repeat
+                            if role = 'COL' then begin
+                                total_quantity := total_quantity + scan."Controlled Quantity";
+                                if scan.user <> usname then
+                                    old_quantity := scan."Controlled Quantity" + old_quantity;
+                            end
+                            else begin
+                                total_quantity := total_quantity + scan."Picked Quantity";
+                                if scan.user <> usname then old_quantity := scan."Picked Quantity" + old_quantity;
+                            end;
+                        until scan.Next() = 0;
+                        total_quantity := total_quantity + QuantityItem;
+
+                    end
+                    else
+                        total_quantity := QuantityItem;
+                    CurrPage.html.autoComplete(cab_value, item_no_text, item_description, total_quantity, box_flag_value);
+                end;
+
                 trigger CheckCAB(cab: JsonObject)
                 var
                     Warehouse_Activity_Line: Record "Warehouse Activity Line";
                     increment_token: JsonToken;
                     cab_token: JsonToken;
-                    cabq_token:JsonToken;
-                    cab_value: Text;
                     increment_value: Text;
-                    item_no_text: Text;
-                    item_description: Text;
+
                     box_flag_token: JsonToken;
-                    box_flag_value: Text;
                     quantity_expected_token: JsonToken;
                     empl_token: JsonToken;
                     quantity_expected_text: Text;
                     quantity_scanned_text: Text;
-                    cabq:text;
                     Colis_token: JsonToken;
-                    emplacement: text;
-                    scan: record "CB historique scan";
                     cab_exists_flag: Integer;
-                    total_quantity: Decimal;
+
                     Item_Reference: Record "Item Reference";
                     item: record item;
                     emplchange: boolean;
                 begin
-                    QuantityItem:=0;
+                    QuantityItem := 0;
                     emplchange := false;
                     cab_exists_flag := 0;
 
@@ -277,9 +315,6 @@ page 76000 "CB Vente"
                     quantity_expected_token.WriteTo(quantity_scanned_text);
                     quantity_scanned_text := quantity_scanned_text.Replace('"', '');
 
-                    cab.SelectToken('cabq', cabq_token);
-                    cabq_token.WriteTo(cabq);
-                    cabq := cabq.Replace('"', '');
 
                     cab.SelectToken('Colis', Colis_token);
                     Colis_token.WriteTo(colisno);
@@ -344,36 +379,9 @@ page 76000 "CB Vente"
                             end;
                             if not Warehouse_Activity_Line.findset() then
                                 Error('Article non existant');
+                            CurrPage.html.remplirqte(cab_value);
 
-                            scan.Reset();
-                            scan.SetRange("Document Type", scan."Document Type"::Vente);
-                            scan.SetRange("Document No.", cmdSave);
-                            scan.setrange(article, item_no_text);
-                            scan.setrange(Magasin, magsave);
-                            if role <> 'COL' then
-                                scan.setrange(Emplacement, emplacement);
-                            scan.setrange(Cancelled, false);
-                            total_quantity := 0;
-                            old_quantity := 0;
-                            if scan.findset() then begin
-                                repeat
-                                    if role = 'COL' then begin
-                                        total_quantity := total_quantity + scan."Controlled Quantity";
-                                        if scan.user <> usname then
-                                            old_quantity := scan."Controlled Quantity" + old_quantity;
-                                    end
-                                    else begin
-                                        total_quantity := total_quantity + scan."Picked Quantity";
-                                        if scan.user <> usname then
-                                            old_quantity := scan."Picked Quantity" + old_quantity;
-                                    end;
-                                until scan.Next() = 0;
-                                total_quantity := total_quantity + 1;
 
-                            end
-                            else
-                                total_quantity := 1;
-                            CurrPage.html.autoComplete(cab_value, item_no_text, item_description, total_quantity, box_flag_value);
                         end else
                             CurrPage.html.cabnonvalide();
                 end;
@@ -754,12 +762,22 @@ page 76000 "CB Vente"
         Colis: record "CB Colis";
         lineno: integer;
         finalquantity: decimal;
-        warehouseline2: record "Warehouse Activity Line";
+    //warehouseline2: record "Warehouse Activity Line";
     begin
         finalquantity := 0;
-        if warehouseline2.get(warehouseline2."Action Type"::Take, warehouseline."No.", warehouseline."Source Line No.") then
-            finalquantity := warehouseline2."CB picked Quantity";
-
+        // warehouseline2.Reset();
+        // warehouseline2.SetRange("Action Type", warehouseline2."Action Type"::Take);
+        // warehouseline2.SetRange("No.", warehouseline."No.");
+        // warehouseline2.SetRange("Source Type", warehouseline."Source Type");
+        // warehouseline2.SetRange("Source Subtype", warehouseline."Source Subtype");
+        // warehouseline2.SetRange("Source Line No.", warehouseline."Source Line No.");
+        // if warehouseline2.findset() then begin
+        //     finalquantity := warehouseline2."CB picked Quantity";
+        //     warehouseline2.Validate("CB Controlled Quantity", warehouseline."CB Controlled Quantity");
+        //     warehouseline2.Modify();
+        // end;
+        // warehouseline.Validate("CB Picked Quantity", finalquantity);
+        // warehouseline.Modify();
         if colisno = '' then
             error('veuillez scanner le colis');
         lineno := 10000;
@@ -772,7 +790,7 @@ page 76000 "CB Vente"
         Colis.SetRange("Picking Line No", warehouseline."Line No.");
         if colis.FindSet() then begin
             colis.Validate("Quantity", warehouseline."CB Controlled Quantity");
-            colis.Validate("Final Quantity", finalquantity);
+            //colis.Validate("Final Quantity", finalquantity);
             colis.Modify();
         end
         else begin
@@ -783,7 +801,7 @@ page 76000 "CB Vente"
             Colis.Validate("Picking No", warehouseline."No.");
             Colis.Validate("Picking Line No", warehouseline."Line No.");
             colis.Validate("Quantity", warehouseline."CB Controlled Quantity");
-            colis.Validate("Final Quantity", finalquantity);
+            //colis.Validate("Final Quantity", finalquantity);
             colis.Insert();
         end;
     end;
@@ -835,7 +853,14 @@ page 76000 "CB Vente"
 
     var
         increment, usname, cmdSave, magsave, role, colisno, typesave : Text;
-        old_quantity,QuantityItem: decimal;
+        item_no_text: Text;
+        item_description: Text;
+        box_flag_value: Text;
+        cab_value: Text;
+
+        old_quantity, QuantityItem : decimal;
+        emplacement: text;
+
 
 
 }

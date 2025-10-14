@@ -183,7 +183,8 @@ function next2() {
     var emp = document.getElementById('emp');
     var Lot = document.getElementById('Lot');
     var daeEx = document.getElementById('daeEx');
-
+    var cabq = document.getElementById('cabq');
+    cabq.value = "0";
 
     const item = {
         "art": article.value,
@@ -361,6 +362,32 @@ function Ventefocus() {
 
 }
 
+function passerCabQuantity() {
+    var cab = document.getElementById('cab');
+    var cabq = document.getElementById('cabq');
+    cab.focus();
+    cab.select();
+    const item = {
+        "cabq": cabq.value
+    }
+
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('remplirqte2', [item]);
+
+
+}
+async function remplirqte() {
+    var cabq = document.getElementById('cabq');
+    cabq.focus();
+    cabq.select();
+
+
+
+}
+
+
+
+
+
 function rempliremp(value) {
     var cab = document.getElementById('cab');
     var article = document.getElementById('articleNo');
@@ -467,12 +494,12 @@ function WhenLoaded() {
     var b = true;
 
     cab.addEventListener('keypress', function(e) {
-        
+
         if ((e.keyCode == 13)) {
             let value = cab.value;
             if (value.length > 0 && (value[0] === 'P' || value[0] === 'Q')) {
-                value = value.substring(1); 
-                cab.value = value;       
+                value = value.substring(1);
+                cab.value = value;
             }
 
             cab.focus();
