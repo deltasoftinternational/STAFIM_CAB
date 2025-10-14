@@ -1,0 +1,19 @@
+{
+    "al.codeAnalyzers": [
+        "${PerTenantExtensionCop}",
+         "${CodeCop}",
+        "${UICop}"
+    ],
+    "al.enableCodeAnalysis": true,
+    "CRS.ObjectNamePrefix": "CB ",
+    "CRS.RemovePrefixFromFilename": true,
+    "CRS.FileNamePattern": "CB<ObjectNameShort>.<ObjectType>.al",
+    "CRS.FileNamePatternExtensions": "<BaseId>-CB<ObjectNameShort>.<ObjectTypeShortPascalCase>.al",
+    "CRS.FileNamePatternPageCustomizations": "CB<ObjectNameShort>.<ObjectType>Ext.al",
+    "CRS.OnSaveAlFileAction": "Rename",
+    "CRS.DisableDefaultAlSnippets": true,
+    "CRS.AlSubFolderName": "src",
+    "al.backgroundCodeAnalysis": "Project",
+    "al.ruleSetPath": "./.vscode/CBRespect.ruleset.json"
+   
+}

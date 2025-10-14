@@ -1,0 +1,56 @@
+{
+    "id": "91476d75-412d-4716-a25b-872ec0ab56fe",
+    "name": "CAB",
+    "publisher": "Deltasoft International",
+    "version": "1.0.0.0",
+    "brief": "",
+    "description": "",
+    "privacyStatement": "",
+    "EULA": "",
+    "help": "",
+    "url": "",
+    "logo": "",
+    "dependencies": [{
+            "id": "6c53635c-da7a-4f40-9e39-835a48789f98",
+            "publisher": "ELVA",
+            "name": "ELVA DMS BC26",
+            "version": "1.0.0.0"
+        },
+        {
+            "id": "0bfb933e-6382-4eca-9db5-bdda953de82b",
+            "publisher": "Deltasoft International",
+            "name": "ELVA STD BC26",
+            "version": "1.0.0.0"
+        },
+        {
+            "id": "840d69c1-a2ae-4b41-bfb1-4b23af2cf237",
+            "publisher": "DeltaSoft International",
+            "name": "StandardTunisien",
+            "version": "1.0.0.0"
+        },
+        {
+            "id": "d5848a24-3146-46bc-ba00-4f4c47ab38bb",
+            "publisher": "Deltasoft International",
+            "name": "STAFIM",
+            "version": "1.0.0.0"
+        }
+    ],
+    "screenshots": [],
+    "platform": "1.0.0.0",
+    "application": "26.0.0.0",
+    "idRanges": [{
+        "from": 76000,
+        "to": 76999
+    }],
+    "resourceExposurePolicy": {
+        "allowDebugging": true,
+        "allowDownloadingSource": false,
+        "includeSourceInSymbolFile": false,
+        "applyToDevExtension": true
+    },
+    "runtime": "15.0",
+    "target": "Cloud",
+    "features": [
+        "NoImplicitWith"
+    ]
+}

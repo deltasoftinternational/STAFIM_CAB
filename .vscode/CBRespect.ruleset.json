@@ -1,0 +1,55 @@
+{
+    "name": "Respect",
+    "description": "This allows us to fix the issues in a prioritized order.",
+    "rules": [
+        {
+            "id": "AW0006",
+            "action": "Error",
+            "justification": "Pages and reports should use the UsageCategory and ApplicationArea properties to be searchable."
+        } 
+        ,
+        {
+            "id": "AA0005",
+            "action": "Error",
+            "justification": "Only use BEGIN..END to enclose compound statements."
+        }
+        ,
+        {
+            "id": "AA0008",
+            "action": "Error",
+            "justification": "Function calls should have parenthesis even if they do not have any parameters."
+        }
+        ,  
+        {
+            "id": "AA0137",
+            "action": "Error",
+            "justification": "Do not declare variables that are unused."
+        }
+        ,
+        {
+            "id": "AA0018",
+            "action": "Error",
+            "justification": "The END, IF, REPEAT, UNTIL, FOR, WHILE, and CASE statement should always start a line."
+        },
+        {
+            "id": "AA0202",
+            "action": "Error",
+            "justification": "To avoid confusion, do not give local variables the same name as fields, methods, or actions in the same scope."
+        },
+        {
+            "id": "AA0225",
+            "action": "Error",
+            "justification": "You must specify a caption in the Caption property for Fields that exist on page objects."
+        },
+        {
+            "id": "AA0074",
+            "action": "None"
+            
+        },
+        {
+            "id": "AL0604",
+            "action": "Error",
+            "justification": " AL0604: Use of implicit 'with' will be removed in the future. Qualify with 'Rec'. This warning will become an error in a future release."
+        }
+    ]
+}
