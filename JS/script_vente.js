@@ -307,6 +307,25 @@ function login() {
 
 }
 
+function selectRow(row, value) {
+    // Remove highlight from all rows in the same table
+    var rows = row.parentElement.querySelectorAll("tr");
+    rows.forEach(r => {
+        r.style.backgroundColor = "#fff";
+    });
+
+    // Highlight the selected row
+    row.style.backgroundColor = "#c8f7c5";
+
+    // Update the hidden input field with the selected value
+    var cmdv = document.getElementById("cmdv");
+    if (cmdv) {
+        cmdv.value = value;
+        cmdv.focus();
+        cmdv.select();
+    }
+}
+
 function remplir() {
     var cmdvl = document.getElementById('cmdvl');
     var cmdv = document.getElementById('cmdv');

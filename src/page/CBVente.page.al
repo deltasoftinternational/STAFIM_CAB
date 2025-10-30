@@ -640,7 +640,16 @@ page 76000 "CB Vente"
         out.APPEND('<!DOCTYPE html> <html> <head> <meta name="viewport" content="width=device-width, initial-scale=1"> <style> body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0; } .container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); } h1 { text-align: center; margin-bottom: 30px; color: #333; } label { display: block; margin-bottom: 8px; color: #333; } input[type="text"], select { width: 100%; padding: 12px 20px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; } .qte-container { display: grid; } button { background-color: #04AA6D; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer; width: 40%; font-size: 16px; transition: background-color 0.3s; } button:hover { background-color: #048f5d; } #resetBtn { background-color: cadetblue; float: left; } #nextBtn { float: right; } #finishBtn { float: left; } .imgcontainer { text-align: center; margin: 24px 0 12px 0; } img.avatar { width: 40%; border-radius: 50%; } /* Change styles for span and cancel button on extra small screens */ @media screen and (max-width: 300px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } } .loader { border: 16px solid #f3f3f3; border-radius: 50%; border-top: 16px solid blue; border-bottom: 16px solid blue; width: 120px; height: 120px; -webkit-animation: spin 2s linear infinite; animation: spin 2s linear infinite; position: absolute; z-index: 10; top: 20%; left: 40%; text-align: center; font-size: 10px; } @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style> </head> ');
         out.APPEND('<body> <h2>Numéro du Vente Scanné</h2> ');
         out.APPEND('<label for="cmdv"><b>numero Vente</b></label> ');
-        out.APPEND('<select id="cmdvl" onChange="remplir()" type="text" name="cmdv" required> ');
+        out.APPEND('<div id="tableContainer" ' +
+'style="width:100%; max-height:250px; overflow-y:auto; border:1px solid #ccc; ' +
+'border-radius:6px; box-sizing:border-box; background-color:#fff; ' +
+'font-family:Arial; font-size:16px; margin-bottom:15px;">');
+
+        out.APPEND('<table style="width:100%; border-collapse:collapse;">' +
+        '<thead>' +
+        '<tr style="background-color:#04AA6D; color:white; position:sticky; top:0;">' +
+        '<th style="text-align:left; padding:10px;">Numéro Vente</th>' +
+        '</tr></thead><tbody>');
 
         IF ADCS_User.FINDSET() THEN BEGIN
 
@@ -715,15 +724,21 @@ page 76000 "CB Vente"
                         end;
                     until Warehouse_Header.Next() = 0;
             end;
-            out.APPEND('<option value=' + '' + '>' + '' + '</option>');
+            //out.APPEND('<option value=' + '' + '>' + '' + '</option>');
 
             if Warehouse_Header_temp.findlast() then
                 REPEAT
-                    out.APPEND('<option value=' + Warehouse_Header_temp."No." + '>' + Warehouse_Header_temp."No." + '</option>');
+                    out.APPEND(
+     '<tr onclick="selectRow(this, ''' + Warehouse_Header_temp."No." + ''')" ' +
+     'style="cursor:pointer; background-color:#fff; border-bottom:1px solid #ddd;">' +
+     '<td style="padding:10px;">' + Warehouse_Header_temp."No." + '</td></tr>'
+ );
+
+
                 UNTIL Warehouse_Header_temp.NEXT(-1) = 0;
         END;
 
-        out.APPEND('</select> ');
+        out.APPEND('</tbody></table></div>');
         out.APPEND('<input type="text" id="cmdv" name="cmdv" required onKeyDown="if(event.keyCode==13) go();"> ');
         out.APPEND('<div style="text-align:center"><button id="gu" name="gu" onKeyDown="if(event.keyCode==13) go();" onClick="go()" style="float: center;">Accès</button></div>');
         out.APPEND('</body> </html>');
