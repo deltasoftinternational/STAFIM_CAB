@@ -26,6 +26,8 @@ controladdin "CB HTML5"
 
     procedure Render(HTML: Text);
     procedure WhenLoaded();
+    procedure remplirqtestock(stock: text);
+
     procedure rempliremp(value: text);
     procedure remplirqte(value: text);
 
@@ -33,6 +35,6 @@ controladdin "CB HTML5"
     procedure ViderCAB();
     procedure Viderqte();
 
-    procedure autoComplete(barcodeNo: code[20]; articleNo: code[20]; desc: Text; qtea: Decimal; bb: Text);
+    procedure autoComplete(barcodeNo: code[20]; articleNo: code[20]; desc: Text; qtea: Decimal; bb: Text; quantitya: decimal);
 
 }

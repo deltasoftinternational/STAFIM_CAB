@@ -137,7 +137,6 @@ function check() {
         article.value = "";
         desc.value = "";
         Lot.value = "";
-        emp.value = "";
         daeEx.value = "";
 
         qtea.value = "";
@@ -217,7 +216,7 @@ function next2() {
 
 
 
-function autoComplete(barcodeNo, itemNo, descv, qtea, bb) {
+function autoComplete(barcodeNo, itemNo, descv, qtea, bb, quantitya) {
     var cabElement = document.getElementById('allcab');
     cabElement.style.width = '100%';
     cabElement.style.display = '';
@@ -245,7 +244,7 @@ function autoComplete(barcodeNo, itemNo, descv, qtea, bb) {
         article.value = itemNo;
         desc.value = descv;
         quanta.value = qtea;
-        quantaf.value = qtea;
+        quantaf.value = quantitya;
 
 
         if (bb === "false" || cabcopy.innerText == "") {
@@ -269,8 +268,7 @@ function autoComplete(barcodeNo, itemNo, descv, qtea, bb) {
     next1();
 
 
-    console.log("qtea", quantaf.value);
-    console.log("qtes", quanta.value);
+
 }
 
 
@@ -408,69 +406,31 @@ async function remplirqte() {
 
 
 function rempliremp(value) {
-    var cab = document.getElementById('cab');
-    var article = document.getElementById('articleNo');
-    var desc = document.getElementById('desc');
 
     var emp = document.getElementById('emp');
 
-    var qtes = document.getElementById('qtes');
-    var qtea = document.getElementById('qtea');
 
-    var cabcopy = document.getElementById('cabcopy');
-    var Lot = document.getElementById('Lot');
-    var daeEx = document.getElementById('daeEx');
-
-    var b = true;
     emp.value = value;
-    cab.focus();
-    cab.select();
-    article.value = "";
-    desc.value = "";
-    Lot.value = "";
-    daeEx.value = "";
-    qtea.value = "";
-    qtes.value = "";
-
-    var increment = document.getElementById('increment');
-    if (increment && increment.checked) {
-        increment = 'TRUE';
-    } else {
-        increment = 'FALSE';
-    }
-
-    if (cab.value == "") {
-        article.value = "";
-        desc.value = "";
-        Lot.value = "";
-        emp.value = "";
-        daeEx.value = "";
-
-        qtea.value = "";
-
-
-    }
-
-
-    if (cabcopy.innerText == cab.value) {
-        b = true;
-
-    } else {
-        b = false;
-        cabcopy.innerText = cab.value;
-    }
-    afficheMessage('Emplacement : ' + cab.value + ' scanné', 'Yellow');
 
     // const cabv = { "cab": cab.value, "b": b, 'articleNo': article.value, "Lot": Lot.value, "daeEx": daeEx.value, "qtea": qtea.value, "qtes": qtes.value, "increment": increment, "emplacement": emp.value }
     // Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckCAB', [cabv]);
 
 }
 
+function remplirqtestock(stock) {
+    var qtestock = document.getElementById('qtestock');
+    qtestock.value = stock;
+}
+
+
 function Viderqte() {
     var cab = document.getElementById('cab');
     var qtes = document.getElementById('qtes');
     var qtea = document.getElementById('qtea');
+    var qtescan = document.getElementById('qtescan');
+
     qtes.value = "";
+    qtescan.value = "";
     qtea.value = "";
 
     cab.focus();
@@ -535,7 +495,6 @@ function WhenLoaded() {
                 article.value = "";
                 desc.value = "";
                 Lot.value = "";
-                emp.value = "";
                 daeEx.value = "";
 
                 qtea.value = "";
@@ -602,7 +561,6 @@ function finish() {
         desc.value = "";
         qtea.value = "";
         cab.value = "";
-        emp.value = "";
         Lot.value = "";
         daeEx.value = "";
     }
@@ -648,16 +606,17 @@ function reset() {
     var errorMessage = document.getElementById('errorMessage');
     var qtea = document.getElementById('qtea');
     var qtes = document.getElementById('qtes');
+    var qtestock = document.getElementById('qtestock');
+
 
     var Lot = document.getElementById('Lot');
     var daeEx = document.getElementById('daeEx');
     var cabq = document.getElementById('cabq');
     cabq.value = "";
-
+    qtestock.value = "";
     qtes.value = "";
     article.value = "";
     desc.value = "";
-    emp.value = "";
 
     cab.value = "";
     qtea.value = "";
