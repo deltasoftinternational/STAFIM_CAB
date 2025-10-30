@@ -503,16 +503,16 @@ page 76000 "CB Vente"
                         repeat
                             if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
                                 if role = 'COL' then
-                                    Warehouse_Activity_Line.Validate("CB Controlled Quantity", Warehouse_Activity_Line."Qty. Outstanding")
+                                    Warehouse_Activity_Line.Validate("STF Controlled Quantity", Warehouse_Activity_Line."Qty. Outstanding")
                                 else
-                                    Warehouse_Activity_Line.Validate("CB Picked Quantity", Warehouse_Activity_Line."Qty. Outstanding");
+                                    Warehouse_Activity_Line.Validate("STF Picked Quantity", Warehouse_Activity_Line."Qty. Outstanding");
                                 newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
                             end
                             else begin
                                 if role = 'COL' then
-                                    Warehouse_Activity_Line.Validate("CB Controlled Quantity", newQuantity)
+                                    Warehouse_Activity_Line.Validate("STF Controlled Quantity", newQuantity)
                                 else
-                                    Warehouse_Activity_Line.Validate("CB Picked Quantity", newQuantity);
+                                    Warehouse_Activity_Line.Validate("STF Picked Quantity", newQuantity);
                                 newQuantity := 0;
                             end;
                             QuantityInLine += Warehouse_Activity_Line."Qty. Outstanding";
@@ -789,7 +789,7 @@ page 76000 "CB Vente"
         Colis.SetRange("Picking No", warehouseline."No.");
         Colis.SetRange("Picking Line No", warehouseline."Line No.");
         if colis.FindSet() then begin
-            colis.Validate("Quantity", warehouseline."CB Controlled Quantity");
+            colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
             //colis.Validate("Final Quantity", finalquantity);
             colis.Modify();
         end
@@ -800,7 +800,7 @@ page 76000 "CB Vente"
             Colis.Validate("Colis No", colisno);
             Colis.Validate("Picking No", warehouseline."No.");
             Colis.Validate("Picking Line No", warehouseline."Line No.");
-            colis.Validate("Quantity", warehouseline."CB Controlled Quantity");
+            colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
             //colis.Validate("Final Quantity", finalquantity);
             colis.Insert();
         end;
