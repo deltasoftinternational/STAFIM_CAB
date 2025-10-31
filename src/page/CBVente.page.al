@@ -71,7 +71,19 @@ page 76000 "CB Vente"
                 trigger terminer(info: JsonObject)
                 var
                     Assignment: Record "STF Wareh Activity Assignment";
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
+
                 begin
+
+                    Warehouse_Activity_Line.reset();
+                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                    Warehouse_Activity_Line.setrange("Picking validated", false);
+                    Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    if Warehouse_Activity_Line.findset() then
+                        error('Veuillez valider tous les emplacements');
+
                     Assignment.Reset();
                     Assignment.setrange("No.", cmdSave);
                     if role = 'COL' then
@@ -105,6 +117,7 @@ page 76000 "CB Vente"
                     ADCS_USER: Record "ADCS User";
                     Wareh_Activity_Assignment: Record "STF Wareh Activity Assignment";
                     Assignment: Record "STF Wareh Activity Assignment";
+                    assigned_user: record "STF WMS Assigned User ADCS";
 
                 begin
 
@@ -126,51 +139,66 @@ page 76000 "CB Vente"
                         Warehouse_Header.SetRange(Type, Warehouse_Header.Type::Pick);
                         Warehouse_Header.SetRange("Location Code", ADCS_User."STF Location");
                         if role = 'PICK' then begin
-
-
-                            Warehouse_Header.SetFilter("STF User ADCS Big Item", usname);
-                            Warehouse_Header.setfilter("STF Status Big Warehouse Act", '%1|%2', Warehouse_Header."STF Status Big Warehouse Act"::Assigned, Warehouse_Header."STF Status Big Warehouse Act"::"Activity In Progress");
-                            if Warehouse_Header.FindSet() then
-                                repeat
-                                    Warehouse_Header_temp.init();
-                                    Warehouse_Header_temp := Warehouse_Header;
-                                    if Warehouse_Header_temp.Insert() then;
-                                until Warehouse_Header.Next() = 0;
+                            Warehouse_Header.setfilter("STF Status Big Warehouse Act", '%1|%2|%3', Warehouse_Header."STF Status Big Warehouse Act"::Assigned, Warehouse_Header."STF Status Big Warehouse Act"::"Activity In Progress", Warehouse_Header."STF Status Big Warehouse Act"::"Waiting for assignment");
+                            assigned_user.Reset();
+                            assigned_user.SetRange(Name, usname);
+                            assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Big Item");
+                            if assigned_user.FindSet() then
+                                if Warehouse_Header.FindSet() then
+                                    repeat
+                                        Warehouse_Header_temp.init();
+                                        Warehouse_Header_temp := Warehouse_Header;
+                                        if not (((Warehouse_Header."STF Status Big Warehouse Act" = Warehouse_Header."STF Status Big Warehouse Act"::Assigned) or (Warehouse_Header."STF Status Big Warehouse Act" = Warehouse_Header."STF Status Big Warehouse Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Big Item" <> usname)) then
+                                            if Warehouse_Header_temp.Insert() then;
+                                    until Warehouse_Header.Next() = 0;
                             Warehouse_Header.setrange("STF User ADCS Big Item");
                             Warehouse_Header.setrange("STF Status Big Warehouse Act");
 
-                            Warehouse_Header.SetFilter("STF User ADCS Small Item", usname);
-                            Warehouse_Header.setfilter("STF Status small Warehouse Act", '%1|%2', Warehouse_Header."STF Status small Warehouse Act"::Assigned, Warehouse_Header."STF Status small Warehouse Act"::"Activity In Progress");
-                            if Warehouse_Header.FindSet() then
-                                repeat
-                                    Warehouse_Header_temp.init();
-                                    Warehouse_Header_temp := Warehouse_Header;
-                                    if Warehouse_Header_temp.Insert() then;
-                                until Warehouse_Header.Next() = 0;
+                            Warehouse_Header.setfilter("STF Status small Warehouse Act", '%1|%2|%3', Warehouse_Header."STF Status small Warehouse Act"::Assigned, Warehouse_Header."STF Status small Warehouse Act"::"Activity In Progress", Warehouse_Header."STF Status small Warehouse Act"::"Waiting for assignment");
+                            assigned_user.Reset();
+                            assigned_user.SetRange(Name, usname);
+                            assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Small Item");
+                            if assigned_user.FindSet() then
+                                if Warehouse_Header.FindSet() then
+                                    repeat
+                                        Warehouse_Header_temp.init();
+                                        Warehouse_Header_temp := Warehouse_Header;
+                                        if not (((Warehouse_Header."STF Status Small Warehouse Act" = Warehouse_Header."STF Status Small Warehouse Act"::Assigned) or (Warehouse_Header."STF Status Small Warehouse Act" = Warehouse_Header."STF Status Small Warehouse Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Small Item" <> usname)) then
+                                            if Warehouse_Header_temp.Insert() then;
+                                    until Warehouse_Header.Next() = 0;
                             Warehouse_Header.setrange("STF User ADCS Small Item");
                             Warehouse_Header.setrange("STF Status small Warehouse Act");
 
-                            Warehouse_Header.SetFilter("STF User ADCS Precious Item", usname);
-                            Warehouse_Header.setfilter("STF Status Precious Wareh Act", '%1|%2', Warehouse_Header."STF Status Precious Wareh Act"::Assigned, Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress");
-                            if Warehouse_Header.FindSet() then
-                                repeat
-                                    Warehouse_Header_temp.init();
-                                    Warehouse_Header_temp := Warehouse_Header;
-                                    if Warehouse_Header_temp.Insert() then;
-                                until Warehouse_Header.Next() = 0;
+                            //Warehouse_Header.SetFilter("STF User ADCS Precious Item", usname);
+                            Warehouse_Header.setfilter("STF Status Precious Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Precious Wareh Act"::Assigned, Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Precious Wareh Act"::"Waiting for assignment");
+                            assigned_user.Reset();
+                            assigned_user.SetRange(Name, usname);
+                            assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Precious Item");
+                            if assigned_user.FindSet() then
+                                if Warehouse_Header.FindSet() then
+                                    repeat
+                                        Warehouse_Header_temp.init();
+                                        Warehouse_Header_temp := Warehouse_Header;
+                                        if not (((Warehouse_Header."STF Status Precious Wareh Act" = Warehouse_Header."STF Status Precious Wareh Act"::Assigned) or (Warehouse_Header."STF Status Precious Wareh Act" = Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Precious Item" <> usname)) then
+                                            if Warehouse_Header_temp.Insert() then;
+                                    until Warehouse_Header.Next() = 0;
 
                         end;
                         if role = 'CROSS' then begin
 
-                            Warehouse_Header.SetRange("STF User ADCS Cross Item", usname);
-                            Warehouse_Header.SetFilter("STF Status Cross Wareh Act", '%1|%2', Warehouse_Header."STF Status Cross Wareh Act"::Assigned, Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress");
-                            if Warehouse_Header.FindSet() then
-                                repeat
 
-                                    Warehouse_Header_temp.init();
-                                    Warehouse_Header_temp := Warehouse_Header;
-                                    if Warehouse_Header_temp.Insert() then;
-                                until Warehouse_Header.Next() = 0;
+                            Warehouse_Header.setfilter("STF Status Cross Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Cross Wareh Act"::Assigned, Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Cross Wareh Act"::"Waiting for assignment");
+                            assigned_user.Reset();
+                            assigned_user.SetRange(Name, usname);
+                            assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Cross Item");
+                            if assigned_user.FindSet() then
+                                if Warehouse_Header.FindSet() then
+                                    repeat
+                                        Warehouse_Header_temp.init();
+                                        Warehouse_Header_temp := Warehouse_Header;
+                                        if not (((Warehouse_Header."STF Status Cross Wareh Act" = Warehouse_Header."STF Status Cross Wareh Act"::Assigned) or (Warehouse_Header."STF Status Cross Wareh Act" = Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Cross Item" <> usname)) then
+                                            if Warehouse_Header_temp.Insert() then;
+                                    until Warehouse_Header.Next() = 0;
                         end;
                         if role = 'COL' then begin
                             Wareh_Activity_Assignment.Reset();
@@ -196,7 +224,10 @@ page 76000 "CB Vente"
                                     Assignment.Reset();
                                     Assignment.setrange("No.", Warehouse_Header."No.");
                                     Assignment.SetRange("Action Type", Assignment."Action Type"::place);
+                                    Assignment.FilterGroup(-1);
+
                                     Assignment.SetRange(Status, Assignment.Status::"Activity Completed");
+                                    Assignment.setfilter("User Assigned", '<>%1 & <> %2', usname, '');
                                     if not Assignment.FindSet() then begin
                                         Warehouse_Header_temp.init();
                                         Warehouse_Header_temp := Warehouse_Header;
@@ -209,6 +240,7 @@ page 76000 "CB Vente"
                             assigned();
                             CurrPage.html.Render(AddItem(cmdv));
                             CurrPage.html.WhenLoaded();
+                            remplirempl();
 
                         end
                         else
@@ -228,6 +260,8 @@ page 76000 "CB Vente"
 
 
                 begin
+                    if cab_exists_flag = 0 then
+                        error('veuillez scanner l''article');
                     cab.SelectToken('cabq', cabq_token);
                     cabq_token.WriteTo(cabq);
                     cabq := cabq.Replace('"', '');
@@ -260,7 +294,7 @@ page 76000 "CB Vente"
                     end
                     else
                         total_quantity := QuantityItem;
-                    CurrPage.html.autoComplete(cab_value, item_no_text, item_description, total_quantity, box_flag_value);
+                    CurrPage.html.autoComplete(cab_value, item_no_text, item_description, total_quantity, box_flag_value, quantitya);
                 end;
 
                 trigger CheckCAB(cab: JsonObject)
@@ -276,15 +310,13 @@ page 76000 "CB Vente"
                     quantity_expected_text: Text;
                     quantity_scanned_text: Text;
                     Colis_token: JsonToken;
-                    cab_exists_flag: Integer;
 
                     Item_Reference: Record "Item Reference";
                     item: record item;
-                    emplchange: boolean;
                 begin
                     QuantityItem := 0;
-                    emplchange := false;
                     cab_exists_flag := 0;
+                    quantitya := 0;
 
                     cab.SelectToken('cab', cab_token);
                     cab_token.WriteTo(cab_value);
@@ -325,65 +357,72 @@ page 76000 "CB Vente"
                             error('Veuillez scanner le colis');
                     if StrLen(quantity_scanned_text) > 5 then
                         Error('Veuillez vérifier la quantité. La quantité ne doit pas dépasser 5 chiffres.');
-                    Warehouse_Activity_Line.Reset();
-                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
-                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Pick");
-                    Warehouse_Activity_Line.SetRange("Bin Code", cab_value);
-                    Warehouse_Activity_Line.setrange("Action Type", Warehouse_Activity_Line."Action Type"::take);
-                    Warehouse_Activity_Line.setrange("STF Assigned WMS User Name", usname);
-                    if role <> 'COL' then
-                        if Warehouse_Activity_Line.FindSet() then
-                            if emplacement <> cab_value then
-                                if cab_value <> '' then begin
-                                    CurrPage.html.rempliremp(cab_value);
-                                    emplchange := true;
-                                end
-                                else
-                                    if emplacement = '' then
-                                        error('Emplacement non existent dans le prélèvement');
                     Item_Reference.reset();
                     Item_Reference.setrange("Reference Type", Item_Reference."Reference Type"::"Bar Code");
                     Item_Reference.setrange("Reference No.", cab_value);
                     if Item_Reference.findset() then begin
                         cab_exists_flag := 1;
                         item_no_text := Item_Reference."Item No.";
-                        item.get(item_no_text);
-                        item_description := item.Description;
-                    end
-                    else
-                        if item.get(cab_value) then begin
-                            cab_exists_flag := 1;
+                        item.reset();
+                        item.setrange("No.", item_no_text);
+                        item.SetFilter("location filter", magsave);
+                        if item.findset() then begin
+                            item.CalcFields("DLT Available Inventory");
                             item_description := item.Description;
-                            item_no_text := cab_value;
+                            CurrPage.html.remplirqtestock(Format(item."DLT Available Inventory"));
+
                         end;
-                    if not emplchange then
-                        if cab_exists_flag = 1 then begin
-                            if role <> 'COL' then
-                                if emplacement = '' then
-                                    error('Veuillez scanner l''emplacement.');
-                            Warehouse_Activity_Line.Reset();
-                            Warehouse_Activity_Line.SetRange("No.", cmdsave);
-                            Warehouse_Activity_Line.SetRange("Item No.", item_no_text);
-                            Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                    end
+                    else begin
+                        item.reset();
+                        item.setrange("No.", cab_value);
+                        item.SetFilter("location filter", magsave);
+                        if item.findset() then begin
+                            item.CalcFields("DLT Available Inventory");
+                            item_description := item.Description;
+                            cab_exists_flag := 1;
+                            item_no_text := item."No.";
 
-                            if role = 'COL' then begin
-                                Warehouse_Activity_Line.SetFilter("STF Zone Type", typesave);
-                                Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
-                            end
-                            else begin
+                            CurrPage.html.remplirqtestock(Format(item."DLT Available Inventory"));
 
-                                Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
-                                Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
-                                Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                        end;
+                    end;
 
-                            end;
-                            if not Warehouse_Activity_Line.findset() then
-                                Error('Article non existant');
-                            CurrPage.html.remplirqte(cab_value);
+                    if cab_exists_flag = 1 then begin
+                        if role <> 'COL' then
+                            if emplacement = '' then
+                                error('Veuillez scanner l''emplacement.');
+                        Warehouse_Activity_Line.Reset();
+                        Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                        Warehouse_Activity_Line.SetRange("Item No.", item_no_text);
+                        Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+
+                        if role = 'COL' then begin
+                            Warehouse_Activity_Line.SetFilter("STF Zone Type", typesave);
+                            Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
+                        end
+                        else begin
+                            Warehouse_Activity_Line.setrange("Picking validated", false);
+
+                            Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+                            Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
+                            Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+
+                        end;
+                        if Warehouse_Activity_Line.findset() then
+                            repeat
+                                if role = 'COL' then
+                                    quantitya += Warehouse_Activity_Line."STF Picked Quantity"
+                                else
+                                    quantitya += Warehouse_Activity_Line.Quantity;
+                            until Warehouse_Activity_Line.Next() = 0
+                        else
+                            Error('Article non existant');
+                        CurrPage.html.remplirqte(cab_value);
 
 
-                        end else
-                            CurrPage.html.cabnonvalide();
+                    end else
+                        CurrPage.html.cabnonvalide();
                 end;
 
 
@@ -417,6 +456,33 @@ page 76000 "CB Vente"
 
 
 
+                trigger validate(item_json: JsonObject)
+                var
+                    token_empl: JsonToken;
+                    emplacement: text;
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
+
+                begin
+                    item_json.SelectToken('emp', token_empl);
+                    token_empl.WriteTo(emplacement);
+                    emplacement := emplacement.Replace('"', '');
+                    Warehouse_Activity_Line.Reset();
+                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                    Warehouse_Activity_Line.SetRange("Picking validated", false);
+
+
+                    Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+                    Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
+                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                    if Warehouse_Activity_Line.FindSet() then
+                        repeat
+                            Warehouse_Activity_Line.Validate("Picking validated", true);
+                            Warehouse_Activity_Line.Modify();
+
+                        until Warehouse_Activity_Line.next() = 0;
+                    remplirempl();
+                end;
 
                 trigger Item(item_json: JsonObject)
                 var
@@ -495,6 +561,9 @@ page 76000 "CB Vente"
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
                     end
                     else begin
+                        Warehouse_Activity_Line.SetRange("Picking validated", false);
+
+
                         Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
                         Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
@@ -631,11 +700,9 @@ page 76000 "CB Vente"
         out: TextBuilder;
         Warehouse_Header_temp: Record "Warehouse Activity Header" temporary;
         Assignment: Record "STF Wareh Activity Assignment";
-
+        assigned_user: record "STF WMS Assigned User ADCS";
 
     begin
-        ADCS_User.RESET();
-        ADCS_User.SETRANGE(Name, usname);
 
         out.APPEND('<!DOCTYPE html> <html> <head> <meta name="viewport" content="width=device-width, initial-scale=1"> <style> body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0; } .container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); } h1 { text-align: center; margin-bottom: 30px; color: #333; } label { display: block; margin-bottom: 8px; color: #333; } input[type="text"], select { width: 100%; padding: 12px 20px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; } .qte-container { display: grid; } button { background-color: #04AA6D; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer; width: 40%; font-size: 16px; transition: background-color 0.3s; } button:hover { background-color: #048f5d; } #resetBtn { background-color: cadetblue; float: left; } #nextBtn { float: right; } #finishBtn { float: left; } .imgcontainer { text-align: center; margin: 24px 0 12px 0; } img.avatar { width: 40%; border-radius: 50%; } /* Change styles for span and cancel button on extra small screens */ @media screen and (max-width: 300px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } } .loader { border: 16px solid #f3f3f3; border-radius: 50%; border-top: 16px solid blue; border-bottom: 16px solid blue; width: 120px; height: 120px; -webkit-animation: spin 2s linear infinite; animation: spin 2s linear infinite; position: absolute; z-index: 10; top: 20%; left: 40%; text-align: center; font-size: 10px; } @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style> </head> ');
         out.APPEND('<body> <h2>Numéro du Vente Scanné</h2> ');
@@ -650,8 +717,12 @@ page 76000 "CB Vente"
         '<tr style="background-color:#04AA6D; color:white; position:sticky; top:0;">' +
         '<th style="text-align:left; padding:10px;">Numéro Vente</th>' +
         '</tr></thead><tbody>');
+        ADCS_User.RESET();
+        ADCS_User.SETRANGE(Name, usname);
+
 
         IF ADCS_User.FINDSET() THEN BEGIN
+
 
 
 
@@ -660,49 +731,66 @@ page 76000 "CB Vente"
             Warehouse_Header.SetRange("Location Code", ADCS_User."STF Location");
 
             if role = 'PICK' then begin
-                Warehouse_Header.SetFilter("STF User ADCS Big Item", usname);
-                Warehouse_Header.setfilter("STF Status Big Warehouse Act", '%1|%2', Warehouse_Header."STF Status Big Warehouse Act"::Assigned, Warehouse_Header."STF Status Big Warehouse Act"::"Activity In Progress");
-                if Warehouse_Header.FindSet() then
-                    repeat
-                        Warehouse_Header_temp.init();
-                        Warehouse_Header_temp := Warehouse_Header;
-                        if Warehouse_Header_temp.Insert() then;
-                    until Warehouse_Header.Next() = 0;
+                Warehouse_Header.setfilter("STF Status Big Warehouse Act", '%1|%2|%3', Warehouse_Header."STF Status Big Warehouse Act"::Assigned, Warehouse_Header."STF Status Big Warehouse Act"::"Activity In Progress", Warehouse_Header."STF Status Big Warehouse Act"::"Waiting for assignment");
+                assigned_user.Reset();
+                assigned_user.SetRange(Name, usname);
+                assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Big Item");
+                if assigned_user.FindSet() then
+                    if Warehouse_Header.FindSet() then
+                        repeat
+                            Warehouse_Header_temp.init();
+                            Warehouse_Header_temp := Warehouse_Header;
+                            if not (((Warehouse_Header."STF Status Big Warehouse Act" = Warehouse_Header."STF Status Big Warehouse Act"::Assigned) or (Warehouse_Header."STF Status Big Warehouse Act" = Warehouse_Header."STF Status Big Warehouse Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Big Item" <> usname)) then
+                                if Warehouse_Header_temp.Insert() then;
+                        until Warehouse_Header.Next() = 0;
                 Warehouse_Header.setrange("STF User ADCS Big Item");
                 Warehouse_Header.setrange("STF Status Big Warehouse Act");
 
-                Warehouse_Header.SetFilter("STF User ADCS Small Item", usname);
-                Warehouse_Header.setfilter("STF Status small Warehouse Act", '%1|%2', Warehouse_Header."STF Status small Warehouse Act"::Assigned, Warehouse_Header."STF Status small Warehouse Act"::"Activity In Progress");
-                if Warehouse_Header.FindSet() then
-                    repeat
-                        Warehouse_Header_temp.init();
-                        Warehouse_Header_temp := Warehouse_Header;
-                        if Warehouse_Header_temp.Insert() then;
-                    until Warehouse_Header.Next() = 0;
+                Warehouse_Header.setfilter("STF Status small Warehouse Act", '%1|%2|%3', Warehouse_Header."STF Status small Warehouse Act"::Assigned, Warehouse_Header."STF Status small Warehouse Act"::"Activity In Progress", Warehouse_Header."STF Status small Warehouse Act"::"Waiting for assignment");
+                assigned_user.Reset();
+                assigned_user.SetRange(Name, usname);
+                assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Small Item");
+                if assigned_user.FindSet() then
+                    if Warehouse_Header.FindSet() then
+                        repeat
+                            Warehouse_Header_temp.init();
+                            Warehouse_Header_temp := Warehouse_Header;
+                            if not (((Warehouse_Header."STF Status Small Warehouse Act" = Warehouse_Header."STF Status Small Warehouse Act"::Assigned) or (Warehouse_Header."STF Status Small Warehouse Act" = Warehouse_Header."STF Status Small Warehouse Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Small Item" <> usname)) then
+                                if Warehouse_Header_temp.Insert() then;
+                        until Warehouse_Header.Next() = 0;
                 Warehouse_Header.setrange("STF User ADCS Small Item");
                 Warehouse_Header.setrange("STF Status small Warehouse Act");
 
-                Warehouse_Header.SetFilter("STF User ADCS Precious Item", usname);
-                Warehouse_Header.setfilter("STF Status Precious Wareh Act", '%1|%2', Warehouse_Header."STF Status Precious Wareh Act"::Assigned, Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress");
-                if Warehouse_Header.FindSet() then
-                    repeat
-                        Warehouse_Header_temp.init();
-                        Warehouse_Header_temp := Warehouse_Header;
-                        if Warehouse_Header_temp.Insert() then;
-                    until Warehouse_Header.Next() = 0;
+                //Warehouse_Header.SetFilter("STF User ADCS Precious Item", usname);
+                Warehouse_Header.setfilter("STF Status Precious Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Precious Wareh Act"::Assigned, Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Precious Wareh Act"::"Waiting for assignment");
+                assigned_user.Reset();
+                assigned_user.SetRange(Name, usname);
+                assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Precious Item");
+                if assigned_user.FindSet() then
+                    if Warehouse_Header.FindSet() then
+                        repeat
+                            Warehouse_Header_temp.init();
+                            Warehouse_Header_temp := Warehouse_Header;
+                            if not (((Warehouse_Header."STF Status Precious Wareh Act" = Warehouse_Header."STF Status Precious Wareh Act"::Assigned) or (Warehouse_Header."STF Status Precious Wareh Act" = Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Precious Item" <> usname)) then
+                                if Warehouse_Header_temp.Insert() then;
+                        until Warehouse_Header.Next() = 0;
 
             end;
             if role = 'CROSS' then begin
 
 
-                Warehouse_Header.SetRange("STF User ADCS Cross Item", usname);
-                Warehouse_Header.setfilter("STF Status Cross Wareh Act", '%1|%2', Warehouse_Header."STF Status Cross Wareh Act"::Assigned, Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress");
-                if Warehouse_Header.FindSet() then
-                    repeat
-                        Warehouse_Header_temp.init();
-                        Warehouse_Header_temp := Warehouse_Header;
-                        if Warehouse_Header_temp.Insert() then;
-                    until Warehouse_Header.Next() = 0;
+                Warehouse_Header.setfilter("STF Status Cross Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Cross Wareh Act"::Assigned, Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Cross Wareh Act"::"Waiting for assignment");
+                assigned_user.Reset();
+                assigned_user.SetRange(Name, usname);
+                assigned_user.SetRange("Zone Type", assigned_user."Zone Type"::"Cross Item");
+                if assigned_user.FindSet() then
+                    if Warehouse_Header.FindSet() then
+                        repeat
+                            Warehouse_Header_temp.init();
+                            Warehouse_Header_temp := Warehouse_Header;
+                            if not (((Warehouse_Header."STF Status Cross Wareh Act" = Warehouse_Header."STF Status Cross Wareh Act"::Assigned) or (Warehouse_Header."STF Status Cross Wareh Act" = Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Cross Item" <> usname)) then
+                                if Warehouse_Header_temp.Insert() then;
+                        until Warehouse_Header.Next() = 0;
             end;
             if role = 'COL' then begin
                 Warehouse_Header.FilterGroup(-1);
@@ -716,7 +804,10 @@ page 76000 "CB Vente"
                         Assignment.Reset();
                         Assignment.setrange("No.", Warehouse_Header."No.");
                         Assignment.SetRange("Action Type", Assignment."Action Type"::place);
+                        Assignment.FilterGroup(-1);
+
                         Assignment.SetRange(Status, Assignment.Status::"Activity Completed");
+                        Assignment.setfilter("User Assigned", '<>%1 & <> %2', usname, '');
                         if not Assignment.FindSet() then begin
                             Warehouse_Header_temp.init();
                             Warehouse_Header_temp := Warehouse_Header;
@@ -726,7 +817,7 @@ page 76000 "CB Vente"
             end;
             //out.APPEND('<option value=' + '' + '>' + '' + '</option>');
 
-            if Warehouse_Header_temp.findlast() then
+            if Warehouse_Header_temp.findset() then
                 REPEAT
                     out.APPEND(
      '<tr onclick="selectRow(this, ''' + Warehouse_Header_temp."No." + ''')" ' +
@@ -735,11 +826,11 @@ page 76000 "CB Vente"
  );
 
 
-                UNTIL Warehouse_Header_temp.NEXT(-1) = 0;
+                UNTIL Warehouse_Header_temp.NEXT() = 0;
         END;
 
         out.APPEND('</tbody></table></div>');
-        out.APPEND('<input type="text" id="cmdv" name="cmdv" required onKeyDown="if(event.keyCode==13) go();"> ');
+        out.APPEND('<input type="text" style="display:none;" id="cmdv" name="cmdv" required onKeyDown="if(event.keyCode==13) go();"> ');
         out.APPEND('<div style="text-align:center"><button id="gu" name="gu" onKeyDown="if(event.keyCode==13) go();" onClick="go()" style="float: center;">Accès</button></div>');
         out.APPEND('</body> </html>');
 
@@ -749,24 +840,36 @@ page 76000 "CB Vente"
     procedure assigned()
     var
         Assignment: Record "STF Wareh Activity Assignment";
+        Assignment_user: Record "STF WMS Assigned User ADCS";
     begin
         Assignment.Reset();
         Assignment.setrange("No.", cmdSave);
-        Assignment.setrange(Status, Assignment.Status::Assigned);
+        Assignment.Setfilter(Status, '%1|%2|%3', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress");
         if role = 'COL' then
             Assignment.SetRange("Action Type", Assignment."Action Type"::place)
-        else begin
+        else
             Assignment.SetRange("Action Type", Assignment."Action Type"::take);
 
-            Assignment.SetRange("User Assigned", usname);
-
-        end;
         if Assignment.FindSet() then
             repeat
-                if role = 'COL' then
-                    Assignment.Validate("User Assigned", usname);
-                Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
-                Assignment.Modify();
+                if role = 'COL' then begin
+                    if Assignment."User Assigned" = '' then
+                        Assignment.Validate("User Assigned", usname);
+                    Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
+                    Assignment.Modify();
+                end
+                else begin
+                    Assignment_user.Reset();
+                    Assignment_user.setrange(name, usname);
+                    Assignment_user.setrange("Zone Type", Assignment."No. Type");
+                    if Assignment_user.FindSet() then begin
+                        if Assignment."User Assigned" = '' then
+                            Assignment.Validate("User Assigned", usname);
+                        Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
+                        Assignment.Modify();
+
+                    end;
+                end;
             until Assignment.Next() = 0;
 
 
@@ -821,6 +924,30 @@ page 76000 "CB Vente"
         end;
     end;
 
+    procedure remplirempl()
+    var
+        Warehouse_Activity_Line: Record "Warehouse Activity Line";
+
+    begin
+        if role <> 'COL' then begin
+
+            CurrPage.html.reset();
+
+            Warehouse_Activity_Line.reset();
+            Warehouse_Activity_Line.setcurrentkey("Bin Code");
+            Warehouse_Activity_Line.SetAscending("Bin Code", true);
+            Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+            Warehouse_Activity_Line.setrange("Picking validated", false);
+            Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+            Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+            Warehouse_Activity_Line.SetRange("No.", cmdsave);
+            if Warehouse_Activity_Line.findset() then
+                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code")
+            else
+                Message('il n''ya pas d''article non validé affecté à cet utilisateur');
+        end;
+    end;
+
     procedure AddItem(cmdv: Text): Text
     var
         out: TextBuilder;
@@ -834,31 +961,59 @@ page 76000 "CB Vente"
         if role = 'COL' then begin
             out.APPEND('<label for="Colis" style:"margin-right:10px"><b>Colis</b></label> ');
             out.APPEND('<input tabindex="-1" enterkeyhint="done" id="Colis" type="text" name="Colis" onKeyDown="if(event.keyCode==27) Colis.select();" onKeyPress="if(event.keyCode==13) SelectCab();" required>');
+            out.APPEND('<label style="display:none;"  for="emp"><b>Emplacement</b></label> <input  id="emp" type="text" name="emp" disabled="true" style="display:none;">')
+
         end
-        else
+        else begin
             out.APPEND('<input style="display:None;" tabindex="-1" enterkeyhint="done" id="Colis" type="text" name="Colis" onKeyDown="if(event.keyCode==27) Colis.select(); required>');
 
+            out.APPEND('<label  for="emp"><b>Emplacement</b></label> <input  id="emp" type="text" name="emp" disabled="true">');
+        end;
+        out.APPEND('</input> ');
 
 
-        out.APPEND('<div id="all" style="display: flex; gap: 2%;width:100%;"> <div id="allcab" style="width:100%;" > <label for="cab"><b>Code à barre</b></label> <input type="text" style="width:49%;" id="cab" tabindex="-1" enterkeyhint="done" name="cab" placeholder="Article" onKeyPress="if(event.keyCode==13) passerCab(this);"  required> <input placeholder="Quantité" style="width:48%;margin-left:2%;" type="text" id="cabq" tabindex="-1" enterkeyhint="done" name="cabquantity" onKeyPress="if(event.keyCode==13) passerCabQuantity(this);" required></div> <div id="alllot" style="display: none; flex-direction: column; align-items: center;"> <label id="lotl" for="Lot"><b>Numéro de Lot</b></label> <input tabindex="-1" enterkeyhint="done" id="Lot" type="text" name="Lot" onKeyDown="if(event.keyCode==27) Lot.select();" onKeyPress="if(event.keyCode==13) check();"  required> </div> </div>');
+
+        out.APPEND('<div id="all" style="display: flex; gap: 2%;width:100%;"> <div id="allcab" style="width:100%;" > <label for="cab"><b>Code à barre</b></label> <input type="text" style="width:48%;" id="cab" tabindex="-1" enterkeyhint="done" name="cab" placeholder="Article" onKeyPress="if(event.keyCode==13) passerCab(this);"  required> <input placeholder="Quantité" style="width:48%;margin-left:2%;" type="text" id="cabq" tabindex="-1" enterkeyhint="done" name="cabquantity" onKeyPress="if(event.keyCode==13) passerCabQuantity(this);" required></div> <div id="alllot" style="display: none; flex-direction: column; align-items: center;"> <label id="lotl" for="Lot"><b>Numéro de Lot</b></label> <input tabindex="-1" enterkeyhint="done" id="Lot" type="text" name="Lot" onKeyDown="if(event.keyCode==27) Lot.select();" onKeyPress="if(event.keyCode==13) check();"  required> </div> </div>');
         out.APPEND('<div id="alldate" style="display: none; flex-direction: column; align-items: center;"> <label id="daeExl" for="daeEx"><b>Date Déxpiration</b></label> <input id="daeEx" type="text" name="daeEx" onKeyDown="if(event.keyCode==27) daeEx.select();" onKeyPress="if(event.keyCode==13) check();" required> </div>');
         out.APPEND('<label for="desc"><b>Description</b></label> <input id="desc" type="text" name="desc" readonly="readonly">');
 
-        out.APPEND('<label for="qtea" style:"margin-right:10px"><b>Quantité</b></label> ');
-        out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtes" type="text" name="qtea" onKeyDown="if(event.keyCode==27) qtea.select();" onKeyPress="if(event.keyCode==13) next2();" required>');
-        out.APPEND('<input tabindex="-1" enterkeyhint="done" style="display:none;" id="qtea" type="text" name="qtea" style="margin-left:1%;width:47%; text-align:center; font-size:16px;" onKeyDown="if(event.keyCode==27) qtea.select();" onKeyPress="if(event.keyCode==13) next2();"   required>');
+        // Container for labels
+        out.APPEND('<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 2%;">');
+        out.APPEND('<label for="qtescan" style="width: 32%; text-align: center;"><b>Qte Scan</b></label>');
+        out.APPEND('<label for="qtea" style="width: 32%; text-align: center;"><b>Qte Total</b></label>');
+        out.APPEND('<label for="qtestock" style="width: 32%; text-align: center;"><b>Qte Stock</b></label>');
+        out.APPEND('</div>');
+
+        out.APPEND('<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 2%; margin-top: 4px;">');
+
+        out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtes" type="text" name="qtescan" '
+            + 'style="width: 32%; text-align: center; font-size: 16px;" '
+            + 'onkeydown="if(event.keyCode==27) this.select();" '
+            + 'onkeypress="if(event.keyCode==13) next2();" required>');
+
+        out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtea" type="text" name="qtea" '
+            + 'style="width: 32%; text-align: center; font-size: 16px; background-color: #f5f5f5; border: 1px solid #ccc;" '
+            + 'readonly>');
+
+        out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtestock" type="text" name="qtestock" '
+            + 'style="width: 32%; text-align: center; font-size: 16px; background-color: #f5f5f5; border: 1px solid #ccc;" '
+            + 'readonly>');
+
+        out.APPEND('</div>');
+
+
         out.APPEND('<label for="article"><b>Article</b></label> <input id="articleNo" type="text" name="article" readonly="readonly" required>');
-        if role = 'COL' then
-            out.APPEND('<label style="display:none;"  for="emp"><b>Emplacement</b></label> <input  id="emp" type="text" name="emp" disabled="true" style="display:none;">')
-        else
-            out.APPEND('<label  for="emp"><b>Emplacement</b></label> <input  id="emp" type="text" name="emp" disabled="true">');
-        out.APPEND('</input> ');
+
         out.APPEND('<label id="cabcopy" style="display:none;"></label>');
         out.APPEND('<div style="">');
 
         out.APPEND('<input id="message" type="text" name="message" style="width:240px;display: inline-block;font-size:16px; background: rgba(0, 0, 0, 0); border: none;"><br>');
         out.APPEND('<div>');
-        out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button> <button onclick="terminer()" style="margin-leftt:4%;background-color: red;width: ">Terminer</button> </div>');
+        if role = 'COL' then
+            out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button> <button onclick="terminer()" style="margin-left:4%;background-color: red;width: ">Terminer</button> </div>')
+
+        else
+            out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button><button onclick="validate()" style="width:40%;margin-left:4%;">Valider</button><tr> <button onclick="finish2()" style="width:40%;margin-right:4%;">Aperçu</button> <button onclick="terminer()" style="margin-left:4%;background-color: red;width:40% ">Terminer</button> </div>');
         out.APPEND('<div id="myModal" class="modal";> <div class="modal-content" style="margin-top:220px;"> <p> Le Vente a été terminée avec succès. Souhaitez-vous continuer ou fermer ?</p> <button class="modal-btn" onclick="fermerModal()">Sortir de lapplication</button> <button id="cmdv" name="cmdv" type="text" onclick="back()" class="modal-btn">Revenir au menu précédent</button> </div> </div>');
 
         out.APPEND('</body> </html>');
@@ -873,8 +1028,10 @@ page 76000 "CB Vente"
         box_flag_value: Text;
         cab_value: Text;
 
-        old_quantity, QuantityItem : decimal;
+        old_quantity, QuantityItem, quantitya : decimal;
         emplacement: text;
+        cab_exists_flag: Integer;
+
 
 
 
