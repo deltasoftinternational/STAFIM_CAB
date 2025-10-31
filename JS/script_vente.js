@@ -282,8 +282,38 @@ function autoComplete(barcodeNo, itemNo, descv, qtea, bb, quantitya) {
 
 
 
+function PICK() {
+    var pass = document.getElementById('passInput');
+    var user = document.getElementById('user');
+    const user2 = {
+        "us": user.value,
+        "ps": pass.value,
+        "role": "PICK"
+    }
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckUser', [user2]);
+}
 
+function CROSS() {
+    var pass = document.getElementById('passInput');
+    var user = document.getElementById('user');
+    const user2 = {
+        "us": user.value,
+        "ps": pass.value,
+        "role": "CROSS"
+    }
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckUser', [user2]);
+}
 
+function COL() {
+    var pass = document.getElementById('passInput');
+    var user = document.getElementById('user');
+    const user2 = {
+        "us": user.value,
+        "ps": pass.value,
+        "role": "COL"
+    }
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckUser', [user2]);
+}
 
 function login() {
     var pass = document.getElementById('passInput');
