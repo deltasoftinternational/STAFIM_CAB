@@ -31,18 +31,14 @@ page 76000 "CB Vente"
                     user.SelectToken('us', userToken);
                     user.SelectToken('ps', passToken);
                     user.SelectToken('role', roletoken);
-
-
                     userToken.WriteTo(usname);
                     passToken.WriteTo(uspass);
                     roletoken.WriteTo(role);
-
                     role := role.Replace('"', '');
                     if role = ' ' then
                         error('veuillez choisir un role');
                     usname := usname.Replace('"', '');
                     uspass := uspass.Replace('"', '');
-
                     if ADCS_USER.Get(usname) then begin
                         if ADCS_USER."CB Password" <> uspass then
                             Error('Mot de passe incorrect !');
@@ -72,40 +68,56 @@ page 76000 "CB Vente"
                 var
                     Assignment: Record "STF Wareh Activity Assignment";
                     Warehouse_Activity_Line: Record "Warehouse Activity Line";
+                    scan: page "CB scan barcode";
 
                 begin
+                    if role <> 'COL' then
+                        if scan.RunModal() = ACTION::OK then begin
+                            Picked_barcode := scan.getbarcode();
+                            if Picked_barcode = '' then
+                                error('vous devez scanner le code à barre');
+                            Warehouse_Activity_Line.Reset();
+                            Warehouse_Activity_Line.setrange("picked barcode", Picked_barcode);
+                            if Warehouse_Activity_Line.FindSet() then
+                                error('code à barre déja utilisé');
+                        end
+                        else
+                            error('vous devez scanner le code à barre');
+
 
                     Warehouse_Activity_Line.reset();
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
-                    Warehouse_Activity_Line.setrange("Picking validated", false);
                     Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
-                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                    //Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
                     Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     if Warehouse_Activity_Line.findset() then
-                        error('Veuillez valider tous les emplacements');
-
+                        repeat
+                            if Warehouse_Activity_Line."Action Type" = Warehouse_Activity_Line."Action Type"::Take then
+                                if not (Warehouse_Activity_Line."Picking validated") then
+                                    error('Veuillez valider tous les emplacements');
+                            if role <> 'COL' then begin
+                                Warehouse_Activity_Line.Validate("Picked barcode", Picked_barcode);
+                                Warehouse_Activity_Line.Modify();
+                            end;
+                        until Warehouse_Activity_Line.Next() = 0;
                     Assignment.Reset();
                     Assignment.setrange("No.", cmdSave);
                     if role = 'COL' then
                         Assignment.SetRange("Action Type", Assignment."Action Type"::Place)
                     else begin
                         Assignment.SetRange("User Assigned", usname);
-
                         Assignment.SetRange("Action Type", Assignment."Action Type"::take);
                     end;
-
                     if Assignment.FindSet() then
                         repeat
                             if role = 'COL' then
                                 Assignment.validate("User Assigned", usname);
-
                             Assignment.Validate(Status, Assignment.Status::"Activity Completed");
                             Assignment.Modify();
                         until Assignment.Next() = 0;
                     cmdSave := '';
                     CurrPage.html.Render(Login2(usname));
                     CurrPage.html.Ventefocus();
-
                 end;
 
                 trigger info(info: JsonObject)
@@ -118,24 +130,33 @@ page 76000 "CB Vente"
                     Wareh_Activity_Assignment: Record "STF Wareh Activity Assignment";
                     Assignment: Record "STF Wareh Activity Assignment";
                     assigned_user: record "STF WMS Assigned User ADCS";
-
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
                 begin
-
-
                     colisno := '';
                     Warehouse_Header.init();
-
                     info.SelectToken('cmdv', cmdvToken);
                     cmdvToken.WriteTo(cmdv);
                     cmdv := cmdv.Replace('"', '');
                     cmdSave := cmdv;
+
+                    if role = 'COL' then begin
+                        picked_barcode := cmdsave;
+                        Warehouse_Activity_Line.reset();
+                        Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                        Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                        Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                        if Warehouse_Activity_Line.FindSet() then
+                            cmdsave := Warehouse_Activity_Line."No."
+                        else
+                            error('code à barre non existant');
+
+                    end;
+
                     Warehouse_Header.Reset();
-                    Warehouse_Header.SetRange("No.", cmdv);
+                    Warehouse_Header.SetRange("No.", cmdsave);
                     typesave := '';
                     ADCS_User.SetRange(Name, usname);
                     if ADCS_User.FindSet() then begin
-
-
                         Warehouse_Header.SetRange(Type, Warehouse_Header.Type::Pick);
                         Warehouse_Header.SetRange("Location Code", ADCS_User."STF Location");
                         if role = 'PICK' then begin
@@ -153,7 +174,6 @@ page 76000 "CB Vente"
                                     until Warehouse_Header.Next() = 0;
                             Warehouse_Header.setrange("STF User ADCS Big Item");
                             Warehouse_Header.setrange("STF Status Big Warehouse Act");
-
                             Warehouse_Header.setfilter("STF Status small Warehouse Act", '%1|%2|%3', Warehouse_Header."STF Status small Warehouse Act"::Assigned, Warehouse_Header."STF Status small Warehouse Act"::"Activity In Progress", Warehouse_Header."STF Status small Warehouse Act"::"Waiting for assignment");
                             assigned_user.Reset();
                             assigned_user.SetRange(Name, usname);
@@ -168,8 +188,6 @@ page 76000 "CB Vente"
                                     until Warehouse_Header.Next() = 0;
                             Warehouse_Header.setrange("STF User ADCS Small Item");
                             Warehouse_Header.setrange("STF Status small Warehouse Act");
-
-                            //Warehouse_Header.SetFilter("STF User ADCS Precious Item", usname);
                             Warehouse_Header.setfilter("STF Status Precious Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Precious Wareh Act"::Assigned, Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Precious Wareh Act"::"Waiting for assignment");
                             assigned_user.Reset();
                             assigned_user.SetRange(Name, usname);
@@ -182,11 +200,8 @@ page 76000 "CB Vente"
                                         if not (((Warehouse_Header."STF Status Precious Wareh Act" = Warehouse_Header."STF Status Precious Wareh Act"::Assigned) or (Warehouse_Header."STF Status Precious Wareh Act" = Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress")) and (Warehouse_Header."STF User ADCS Precious Item" <> usname)) then
                                             if Warehouse_Header_temp.Insert() then;
                                     until Warehouse_Header.Next() = 0;
-
                         end;
                         if role = 'CROSS' then begin
-
-
                             Warehouse_Header.setfilter("STF Status Cross Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Cross Wareh Act"::Assigned, Warehouse_Header."STF Status Cross Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Cross Wareh Act"::"Waiting for assignment");
                             assigned_user.Reset();
                             assigned_user.SetRange(Name, usname);
@@ -212,12 +227,11 @@ page 76000 "CB Vente"
                                     else
                                         typesave += '|' + Format(Wareh_Activity_Assignment."No. Type");
                                 until Wareh_Activity_Assignment.Next() = 0;
-
                             Warehouse_Header.FilterGroup(-1);
-
                             Warehouse_Header.setfilter("STF Status Big Warehouse Act", Format(Warehouse_Header."STF Status Big Warehouse Act"::"Activity Completed"));
                             Warehouse_Header.setfilter("STF Status Small Warehouse Act", Format(Warehouse_Header."STF Status Small Warehouse Act"::"Activity Completed"));
                             Warehouse_Header.setfilter("STF Status Precious Wareh Act", Format(Warehouse_Header."STF Status Precious Wareh Act"::"Activity Completed"));
+                            Warehouse_Header.setfilter("STF Status cross Wareh Act", Format(Warehouse_Header."STF Status cross Wareh Act"::"Activity Completed"));
 
                             if Warehouse_Header.FindSet() then
                                 repeat
@@ -225,7 +239,6 @@ page 76000 "CB Vente"
                                     Assignment.setrange("No.", Warehouse_Header."No.");
                                     Assignment.SetRange("Action Type", Assignment."Action Type"::place);
                                     Assignment.FilterGroup(-1);
-
                                     Assignment.SetRange(Status, Assignment.Status::"Activity Completed");
                                     Assignment.setfilter("User Assigned", '<>%1 & <> %2', usname, '');
                                     if not Assignment.FindSet() then begin
@@ -238,13 +251,13 @@ page 76000 "CB Vente"
                         if Warehouse_Header_temp.FindSet() then begin
                             magsave := Warehouse_Header_temp."Location Code";
                             assigned();
-                            CurrPage.html.Render(AddItem(cmdv));
+                            CurrPage.html.Render(AddItem(cmdsave));
                             CurrPage.html.WhenLoaded();
                             remplirempl();
 
                         end
                         else
-                            Message('Code prélèvement invalide!');
+                            Message('Prélèvement invalide!');
                     end
                     else
                         Message('Veuillez affecter l''utilisateur');
@@ -303,14 +316,12 @@ page 76000 "CB Vente"
                     increment_token: JsonToken;
                     cab_token: JsonToken;
                     increment_value: Text;
-
                     box_flag_token: JsonToken;
                     quantity_expected_token: JsonToken;
                     empl_token: JsonToken;
                     quantity_expected_text: Text;
                     quantity_scanned_text: Text;
                     Colis_token: JsonToken;
-
                     Item_Reference: Record "Item Reference";
                     item: record item;
                 begin
@@ -325,7 +336,6 @@ page 76000 "CB Vente"
                     cab.SelectToken('emplacement', empl_token);
                     empl_token.WriteTo(emplacement);
                     emplacement := emplacement.Replace('"', '').Replace('\r', '');
-
 
                     cab.SelectToken('increment', increment_token);
                     increment_token.WriteTo(increment_value);
@@ -346,7 +356,6 @@ page 76000 "CB Vente"
                     cab.SelectToken('qtes', quantity_expected_token);
                     quantity_expected_token.WriteTo(quantity_scanned_text);
                     quantity_scanned_text := quantity_scanned_text.Replace('"', '');
-
 
                     cab.SelectToken('Colis', Colis_token);
                     Colis_token.WriteTo(colisno);
@@ -400,6 +409,7 @@ page 76000 "CB Vente"
                         if role = 'COL' then begin
                             Warehouse_Activity_Line.SetFilter("STF Zone Type", typesave);
                             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
+                            Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
                         end
                         else begin
                             Warehouse_Activity_Line.setrange("Picking validated", false);
@@ -411,10 +421,7 @@ page 76000 "CB Vente"
                         end;
                         if Warehouse_Activity_Line.findset() then
                             repeat
-                                if role = 'COL' then
-                                    quantitya += Warehouse_Activity_Line."STF Picked Quantity"
-                                else
-                                    quantitya += Warehouse_Activity_Line.Quantity;
+                                quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0
                         else
                             Error('Article non existant');
@@ -440,28 +447,16 @@ page 76000 "CB Vente"
 
 
                 trigger fermerModal(item: JsonObject)
-
                 begin
-
-
-
                     Page.run(52003);
-
-
                 end;
-
-
-
-
-
-
 
                 trigger validate(item_json: JsonObject)
                 var
                     token_empl: JsonToken;
                     emplacement: text;
                     Warehouse_Activity_Line: Record "Warehouse Activity Line";
-
+                    ModalResult: Action;
                 begin
                     item_json.SelectToken('emp', token_empl);
                     token_empl.WriteTo(emplacement);
@@ -470,16 +465,20 @@ page 76000 "CB Vente"
                     Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
                     Warehouse_Activity_Line.SetRange("Picking validated", false);
-
-
                     Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
                     Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
                     if Warehouse_Activity_Line.FindSet() then
                         repeat
+                            if Warehouse_Activity_Line."Qty. Outstanding" <> Warehouse_Activity_Line."STF Picked Quantity" then begin
+                                ModalResult := Page.RunModal(76004, Warehouse_Activity_Line);
+                                if ModalResult <> ACTION::LookupOK then
+                                    error('vous devez choisir un code motif');
+                                if Warehouse_Activity_Line."Warehouse Reason Code" = '' then
+                                    error('vous devez choisir un code motif');
+                            end;
                             Warehouse_Activity_Line.Validate("Picking validated", true);
                             Warehouse_Activity_Line.Modify();
-
                         until Warehouse_Activity_Line.next() = 0;
                     remplirempl();
                 end;
@@ -559,6 +558,7 @@ page 76000 "CB Vente"
                     if role = 'COL' then begin
                         Warehouse_Activity_Line.setfilter("STF Zone Type", typesave);
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
+                        Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
                     end
                     else begin
                         Warehouse_Activity_Line.SetRange("Picking validated", false);
@@ -571,15 +571,19 @@ page 76000 "CB Vente"
                     if Warehouse_Activity_Line.findset() then
                         repeat
                             if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
-                                if role = 'COL' then
-                                    Warehouse_Activity_Line.Validate("STF Controlled Quantity", Warehouse_Activity_Line."Qty. Outstanding")
+                                if role = 'COL' then begin
+                                    Warehouse_Activity_Line.Validate("STF Controlled Quantity", Warehouse_Activity_Line."Qty. Outstanding");
+                                    Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                                end
                                 else
                                     Warehouse_Activity_Line.Validate("STF Picked Quantity", Warehouse_Activity_Line."Qty. Outstanding");
                                 newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
                             end
                             else begin
-                                if role = 'COL' then
-                                    Warehouse_Activity_Line.Validate("STF Controlled Quantity", newQuantity)
+                                if role = 'COL' then begin
+                                    Warehouse_Activity_Line.Validate("STF Controlled Quantity", newQuantity);
+                                    Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                                end
                                 else
                                     Warehouse_Activity_Line.Validate("STF Picked Quantity", newQuantity);
                                 newQuantity := 0;
@@ -674,17 +678,18 @@ page 76000 "CB Vente"
                 out.APPEND('<option value=' + ADCS_User.Name + '>' + ADCS_User.Name + '</option>');
             UNTIL ADCS_User.NEXT() = 0;
 
-        out.APPEND('</select> ');
-        out.APPEND('<label for="role"><b>Type d''utilisateur</b></label>');
-        out.APPEND('<select id="role" name="role">');
-        out.APPEND('<option value=" "> </option>');
-        out.APPEND('<option value="PICK">Picking</option>');
-        out.APPEND('<option value="COL">Colisage Et Emballage</option>');
-        out.APPEND('<option value="CROSS">Cross</option>');
-        out.APPEND('</select>');
+        // out.APPEND('</select> ');
+        // out.APPEND('<label for="role"><b>Type d''utilisateur</b></label>');
+        // out.APPEND('<select id="role" name="role">');
+        // out.APPEND('<option value=" "> </option>');
+        // out.APPEND('<option value="PICK">Picking</option>');
+        // out.APPEND('<option value="COL">Colisage Et Emballage</option>');
+        // out.APPEND('<option value="CROSS">Cross</option>');
+        // out.APPEND('</select>');
         out.APPEND('<label for="psw"><b>Mot de passe</b></label> ');
         out.APPEND('<input  id="passInput" type="password" placeholder="Enter Mot de passe" name="psw" required onKeyDown="if(event.keyCode==13) login();"> ');
-        out.APPEND('<div style="text-align:center"><button   id="gu" name="gu" onKeyDown="if(event.keyCode==13) login();" onClick="login()"  style="float: center;">se connecter</button></div></body>');
+        //out.APPEND('<div style="text-align:center"><button   id="gu" name="gu" onKeyDown="if(event.keyCode==13) login();" onClick="login()"  style="float: center;">se connecter</button></div></body>');
+        out.APPEND('<div style="text-align:center;"> <button onclick="PICK()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Picking</button> <button onclick="CROSS()" style="width:40%;margin-left:4%;">Cross</button> <button onclick="COL()" style="margin-left:4%;background-color: red;width: ">Colisage Et Emballage</button> </div>');
 
         EXIT(Format(out));
     END;
@@ -699,24 +704,28 @@ page 76000 "CB Vente"
         Warehouse_Header: Record "Warehouse Activity Header";
         out: TextBuilder;
         Warehouse_Header_temp: Record "Warehouse Activity Header" temporary;
-        Assignment: Record "STF Wareh Activity Assignment";
         assigned_user: record "STF WMS Assigned User ADCS";
 
     begin
 
         out.APPEND('<!DOCTYPE html> <html> <head> <meta name="viewport" content="width=device-width, initial-scale=1"> <style> body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0; } .container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); } h1 { text-align: center; margin-bottom: 30px; color: #333; } label { display: block; margin-bottom: 8px; color: #333; } input[type="text"], select { width: 100%; padding: 12px 20px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; } .qte-container { display: grid; } button { background-color: #04AA6D; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer; width: 40%; font-size: 16px; transition: background-color 0.3s; } button:hover { background-color: #048f5d; } #resetBtn { background-color: cadetblue; float: left; } #nextBtn { float: right; } #finishBtn { float: left; } .imgcontainer { text-align: center; margin: 24px 0 12px 0; } img.avatar { width: 40%; border-radius: 50%; } /* Change styles for span and cancel button on extra small screens */ @media screen and (max-width: 300px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } } .loader { border: 16px solid #f3f3f3; border-radius: 50%; border-top: 16px solid blue; border-bottom: 16px solid blue; width: 120px; height: 120px; -webkit-animation: spin 2s linear infinite; animation: spin 2s linear infinite; position: absolute; z-index: 10; top: 20%; left: 40%; text-align: center; font-size: 10px; } @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style> </head> ');
         out.APPEND('<body> <h2>Numéro du Vente Scanné</h2> ');
-        out.APPEND('<label for="cmdv"><b>numero Vente</b></label> ');
         out.APPEND('<div id="tableContainer" ' +
 'style="width:100%; max-height:250px; overflow-y:auto; border:1px solid #ccc; ' +
 'border-radius:6px; box-sizing:border-box; background-color:#fff; ' +
 'font-family:Arial; font-size:16px; margin-bottom:15px;">');
-
-        out.APPEND('<table style="width:100%; border-collapse:collapse;">' +
+        if role <> 'COL' then
+            out.APPEND('<table style="width:100%; border-collapse:collapse;">' +
         '<thead>' +
         '<tr style="background-color:#04AA6D; color:white; position:sticky; top:0;">' +
         '<th style="text-align:left; padding:10px;">Numéro Vente</th>' +
-        '</tr></thead><tbody>');
+        '</tr></thead><tbody>')
+        else
+            out.APPEND('<table style="width:100%; border-collapse:collapse;">' +
+            '<thead>' +
+            '<tr style="background-color:#04AA6D; color:white; position:sticky; top:0;">' +
+            '<th style="text-align:left; padding:10px;">Code à barre</th>' +
+            '</tr></thead><tbody>');
         ADCS_User.RESET();
         ADCS_User.SETRANGE(Name, usname);
 
@@ -761,7 +770,6 @@ page 76000 "CB Vente"
                 Warehouse_Header.setrange("STF User ADCS Small Item");
                 Warehouse_Header.setrange("STF Status small Warehouse Act");
 
-                //Warehouse_Header.SetFilter("STF User ADCS Precious Item", usname);
                 Warehouse_Header.setfilter("STF Status Precious Wareh Act", '%1|%2|%3', Warehouse_Header."STF Status Precious Wareh Act"::Assigned, Warehouse_Header."STF Status Precious Wareh Act"::"Activity In Progress", Warehouse_Header."STF Status Precious Wareh Act"::"Waiting for assignment");
                 assigned_user.Reset();
                 assigned_user.SetRange(Name, usname);
@@ -792,45 +800,26 @@ page 76000 "CB Vente"
                                 if Warehouse_Header_temp.Insert() then;
                         until Warehouse_Header.Next() = 0;
             end;
-            if role = 'COL' then begin
-                Warehouse_Header.FilterGroup(-1);
 
-                Warehouse_Header.setfilter("STF Status Big Warehouse Act", Format(Warehouse_Header."STF Status Big Warehouse Act"::"Activity Completed"));
-                Warehouse_Header.setfilter("STF Status Small Warehouse Act", Format(Warehouse_Header."STF Status Small Warehouse Act"::"Activity Completed"));
-                Warehouse_Header.setfilter("STF Status Precious Wareh Act", Format(Warehouse_Header."STF Status Precious Wareh Act"::"Activity Completed"));
-
-                if Warehouse_Header.FindSet() then
-                    repeat
-                        Assignment.Reset();
-                        Assignment.setrange("No.", Warehouse_Header."No.");
-                        Assignment.SetRange("Action Type", Assignment."Action Type"::place);
-                        Assignment.FilterGroup(-1);
-
-                        Assignment.SetRange(Status, Assignment.Status::"Activity Completed");
-                        Assignment.setfilter("User Assigned", '<>%1 & <> %2', usname, '');
-                        if not Assignment.FindSet() then begin
-                            Warehouse_Header_temp.init();
-                            Warehouse_Header_temp := Warehouse_Header;
-                            if Warehouse_Header_temp.Insert() then;
-                        end;
-                    until Warehouse_Header.Next() = 0;
-            end;
-            //out.APPEND('<option value=' + '' + '>' + '' + '</option>');
-
-            if Warehouse_Header_temp.findset() then
-                REPEAT
-                    out.APPEND(
-     '<tr onclick="selectRow(this, ''' + Warehouse_Header_temp."No." + ''')" ' +
-     'style="cursor:pointer; background-color:#fff; border-bottom:1px solid #ddd;">' +
-     '<td style="padding:10px;">' + Warehouse_Header_temp."No." + '</td></tr>'
- );
+            if role <> 'COL' then
+                if Warehouse_Header_temp.findset() then
+                    REPEAT
+                        out.APPEND(
+         '<tr onclick="selectRow(this, ''' + Warehouse_Header_temp."No." + ''')" ' +
+         'style="cursor:pointer; background-color:#fff; border-bottom:1px solid #ddd;">' +
+         '<td style="padding:10px;">' + Warehouse_Header_temp."No." + '</td></tr>'
+     );
 
 
-                UNTIL Warehouse_Header_temp.NEXT() = 0;
+                    UNTIL Warehouse_Header_temp.NEXT() = 0;
         END;
 
         out.APPEND('</tbody></table></div>');
-        out.APPEND('<input type="text" style="display:none;" id="cmdv" name="cmdv" required onKeyDown="if(event.keyCode==13) go();"> ');
+        if role <> 'COL' then
+            out.APPEND('<input type="text" style="display:none;" id="cmdv" name="cmdv" required onKeyDown="if(event.keyCode==13) go();"> ')
+        else
+            out.APPEND('<input type="text" id="cmdv" name="cmdv" required onKeyDown="if(event.keyCode==13) go();"> ');
+
         out.APPEND('<div style="text-align:center"><button id="gu" name="gu" onKeyDown="if(event.keyCode==13) go();" onClick="go()" style="float: center;">Accès</button></div>');
         out.APPEND('</body> </html>');
 
@@ -879,23 +868,8 @@ page 76000 "CB Vente"
     var
         Colis: record "CB Colis";
         lineno: integer;
-        finalquantity: decimal;
-    //warehouseline2: record "Warehouse Activity Line";
     begin
-        finalquantity := 0;
-        // warehouseline2.Reset();
-        // warehouseline2.SetRange("Action Type", warehouseline2."Action Type"::Take);
-        // warehouseline2.SetRange("No.", warehouseline."No.");
-        // warehouseline2.SetRange("Source Type", warehouseline."Source Type");
-        // warehouseline2.SetRange("Source Subtype", warehouseline."Source Subtype");
-        // warehouseline2.SetRange("Source Line No.", warehouseline."Source Line No.");
-        // if warehouseline2.findset() then begin
-        //     finalquantity := warehouseline2."CB picked Quantity";
-        //     warehouseline2.Validate("CB Controlled Quantity", warehouseline."CB Controlled Quantity");
-        //     warehouseline2.Modify();
-        // end;
-        // warehouseline.Validate("CB Picked Quantity", finalquantity);
-        // warehouseline.Modify();
+
         if colisno = '' then
             error('veuillez scanner le colis');
         lineno := 10000;
@@ -908,7 +882,6 @@ page 76000 "CB Vente"
         Colis.SetRange("Picking Line No", warehouseline."Line No.");
         if colis.FindSet() then begin
             colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
-            //colis.Validate("Final Quantity", finalquantity);
             colis.Modify();
         end
         else begin
@@ -919,7 +892,6 @@ page 76000 "CB Vente"
             Colis.Validate("Picking No", warehouseline."No.");
             Colis.Validate("Picking Line No", warehouseline."Line No.");
             colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
-            //colis.Validate("Final Quantity", finalquantity);
             colis.Insert();
         end;
     end;
@@ -977,7 +949,6 @@ page 76000 "CB Vente"
         out.APPEND('<div id="alldate" style="display: none; flex-direction: column; align-items: center;"> <label id="daeExl" for="daeEx"><b>Date Déxpiration</b></label> <input id="daeEx" type="text" name="daeEx" onKeyDown="if(event.keyCode==27) daeEx.select();" onKeyPress="if(event.keyCode==13) check();" required> </div>');
         out.APPEND('<label for="desc"><b>Description</b></label> <input id="desc" type="text" name="desc" readonly="readonly">');
 
-        // Container for labels
         out.APPEND('<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 2%;">');
         out.APPEND('<label for="qtescan" style="width: 32%; text-align: center;"><b>Qte Scan</b></label>');
         out.APPEND('<label for="qtea" style="width: 32%; text-align: center;"><b>Qte Total</b></label>');
@@ -1029,7 +1000,7 @@ page 76000 "CB Vente"
         cab_value: Text;
 
         old_quantity, QuantityItem, quantitya : decimal;
-        emplacement: text;
+        emplacement, Picked_barcode : text;
         cab_exists_flag: Integer;
 
 
