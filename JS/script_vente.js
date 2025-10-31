@@ -566,6 +566,15 @@ function finish() {
     }
 }
 
+function validate() {
+    var emp = document.getElementById('emp');
+    const item = {
+        "emp": emp.value
+    }
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('validate', [item]);
+
+}
+
 
 function passerQte(enCours) {
 

@@ -12,7 +12,7 @@ tableextension 76001 "CB Warehouse Activity Line" extends "Warehouse Activity Li
             Editable = false;
             FieldClass = FlowField;
         }
-        field(76001; "Picked validated"; Boolean)
+        field(76001; "Picking validated"; Boolean)
         {
 
         }

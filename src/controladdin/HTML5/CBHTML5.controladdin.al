@@ -15,6 +15,7 @@ controladdin "CB HTML5"
 
 
     procedure Ventefocus();
+    event validate(item: JsonObject);
 
     event CheckUser(user: JsonObject);
     event item(item: JsonObject);
@@ -33,6 +34,7 @@ controladdin "CB HTML5"
 
     procedure cabnonvalide();
     procedure ViderCAB();
+    procedure reset();
     procedure Viderqte();
 
     procedure autoComplete(barcodeNo: code[20]; articleNo: code[20]; desc: Text; qtea: Decimal; bb: Text; quantitya: decimal);

@@ -71,7 +71,19 @@ page 76000 "CB Vente"
                 trigger terminer(info: JsonObject)
                 var
                     Assignment: Record "STF Wareh Activity Assignment";
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
+
                 begin
+
+                    Warehouse_Activity_Line.reset();
+                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                    Warehouse_Activity_Line.setrange("Picking validated", false);
+                    Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    if Warehouse_Activity_Line.findset() then
+                        error('Veuillez valider tous les emplacements');
+
                     Assignment.Reset();
                     Assignment.setrange("No.", cmdSave);
                     if role = 'COL' then
@@ -105,7 +117,6 @@ page 76000 "CB Vente"
                     ADCS_USER: Record "ADCS User";
                     Wareh_Activity_Assignment: Record "STF Wareh Activity Assignment";
                     Assignment: Record "STF Wareh Activity Assignment";
-                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
                     assigned_user: record "STF WMS Assigned User ADCS";
 
                 begin
@@ -229,18 +240,7 @@ page 76000 "CB Vente"
                             assigned();
                             CurrPage.html.Render(AddItem(cmdv));
                             CurrPage.html.WhenLoaded();
-                            Warehouse_Activity_Line.reset();
-                            Warehouse_Activity_Line.setcurrentkey("Bin Code");
-                            Warehouse_Activity_Line.SetAscending("Bin Code", true);
-                            Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
-                            Warehouse_Activity_Line.setrange("Picked validated", false);
-                            Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
-                            Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
-                            Warehouse_Activity_Line.SetRange("No.", cmdsave);
-                            if Warehouse_Activity_Line.findset() then
-                                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code")
-                            else
-                                error('il n''ya pas d''article non validé affecté à cet utilisateur');
+                            remplirempl();
 
                         end
                         else
@@ -260,6 +260,8 @@ page 76000 "CB Vente"
 
 
                 begin
+                    if cab_exists_flag = 0 then
+                        error('veuillez scanner l''article');
                     cab.SelectToken('cabq', cabq_token);
                     cabq_token.WriteTo(cabq);
                     cabq := cabq.Replace('"', '');
@@ -308,7 +310,6 @@ page 76000 "CB Vente"
                     quantity_expected_text: Text;
                     quantity_scanned_text: Text;
                     Colis_token: JsonToken;
-                    cab_exists_flag: Integer;
 
                     Item_Reference: Record "Item Reference";
                     item: record item;
@@ -401,7 +402,7 @@ page 76000 "CB Vente"
                             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
                         end
                         else begin
-                            Warehouse_Activity_Line.setrange("Picked validated", false);
+                            Warehouse_Activity_Line.setrange("Picking validated", false);
 
                             Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
                             Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
@@ -409,10 +410,12 @@ page 76000 "CB Vente"
 
                         end;
                         if Warehouse_Activity_Line.findset() then
-                            if role = 'COL' then
-                                quantitya += Warehouse_Activity_Line."STF Picked Quantity"
-                            else
-                                quantitya += Warehouse_Activity_Line.Quantity
+                            repeat
+                                if role = 'COL' then
+                                    quantitya += Warehouse_Activity_Line."STF Picked Quantity"
+                                else
+                                    quantitya += Warehouse_Activity_Line.Quantity;
+                            until Warehouse_Activity_Line.Next() = 0
                         else
                             Error('Article non existant');
                         CurrPage.html.remplirqte(cab_value);
@@ -453,6 +456,33 @@ page 76000 "CB Vente"
 
 
 
+                trigger validate(item_json: JsonObject)
+                var
+                    token_empl: JsonToken;
+                    emplacement: text;
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
+
+                begin
+                    item_json.SelectToken('emp', token_empl);
+                    token_empl.WriteTo(emplacement);
+                    emplacement := emplacement.Replace('"', '');
+                    Warehouse_Activity_Line.Reset();
+                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                    Warehouse_Activity_Line.SetRange("Picking validated", false);
+
+
+                    Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+                    Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
+                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+                    if Warehouse_Activity_Line.FindSet() then
+                        repeat
+                            Warehouse_Activity_Line.Validate("Picking validated", true);
+                            Warehouse_Activity_Line.Modify();
+
+                        until Warehouse_Activity_Line.next() = 0;
+                    remplirempl();
+                end;
 
                 trigger Item(item_json: JsonObject)
                 var
@@ -531,7 +561,7 @@ page 76000 "CB Vente"
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
                     end
                     else begin
-                        Warehouse_Activity_Line.SetRange("Picked validated", false);
+                        Warehouse_Activity_Line.SetRange("Picking validated", false);
 
 
                         Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
@@ -894,6 +924,30 @@ page 76000 "CB Vente"
         end;
     end;
 
+    procedure remplirempl()
+    var
+        Warehouse_Activity_Line: Record "Warehouse Activity Line";
+
+    begin
+        if role <> 'COL' then begin
+
+            CurrPage.html.reset();
+
+            Warehouse_Activity_Line.reset();
+            Warehouse_Activity_Line.setcurrentkey("Bin Code");
+            Warehouse_Activity_Line.SetAscending("Bin Code", true);
+            Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+            Warehouse_Activity_Line.setrange("Picking validated", false);
+            Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
+            Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
+            Warehouse_Activity_Line.SetRange("No.", cmdsave);
+            if Warehouse_Activity_Line.findset() then
+                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code")
+            else
+                Message('il n''ya pas d''article non validé affecté à cet utilisateur');
+        end;
+    end;
+
     procedure AddItem(cmdv: Text): Text
     var
         out: TextBuilder;
@@ -955,7 +1009,11 @@ page 76000 "CB Vente"
 
         out.APPEND('<input id="message" type="text" name="message" style="width:240px;display: inline-block;font-size:16px; background: rgba(0, 0, 0, 0); border: none;"><br>');
         out.APPEND('<div>');
-        out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button> <button onclick="terminer()" style="margin-leftt:4%;background-color: red;width: ">Terminer</button> </div>');
+        if role = 'COL' then
+            out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button> <button onclick="terminer()" style="margin-left:4%;background-color: red;width: ">Terminer</button> </div>')
+
+        else
+            out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button><button onclick="validate()" style="width:40%;margin-left:4%;">Valider</button><tr> <button onclick="finish2()" style="width:40%;margin-right:4%;">Aperçu</button> <button onclick="terminer()" style="margin-left:4%;background-color: red;width:40% ">Terminer</button> </div>');
         out.APPEND('<div id="myModal" class="modal";> <div class="modal-content" style="margin-top:220px;"> <p> Le Vente a été terminée avec succès. Souhaitez-vous continuer ou fermer ?</p> <button class="modal-btn" onclick="fermerModal()">Sortir de lapplication</button> <button id="cmdv" name="cmdv" type="text" onclick="back()" class="modal-btn">Revenir au menu précédent</button> </div> </div>');
 
         out.APPEND('</body> </html>');
@@ -972,6 +1030,7 @@ page 76000 "CB Vente"
 
         old_quantity, QuantityItem, quantitya : decimal;
         emplacement: text;
+        cab_exists_flag: Integer;
 
 
 
