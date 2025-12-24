@@ -108,6 +108,8 @@ page 76000 "CB Vente"
                         Assignment.SetRange("User Assigned", usname);
                         Assignment.SetRange("Action Type", Assignment."Action Type"::take);
                     end;
+                    if role = 'COL' then
+                        Assignment.setfilter("No. Type", typesaveall);
                     if Assignment.FindSet() then
                         repeat
                             if role = 'COL' then
@@ -138,15 +140,23 @@ page 76000 "CB Vente"
                     cmdvToken.WriteTo(cmdv);
                     cmdv := cmdv.Replace('"', '');
                     cmdSave := cmdv;
-
+                    typesaveall := '';
                     if role = 'COL' then begin
                         picked_barcode := cmdsave;
                         Warehouse_Activity_Line.reset();
                         Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
                         Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
-                        if Warehouse_Activity_Line.FindSet() then
-                            cmdsave := Warehouse_Activity_Line."No."
+                        if Warehouse_Activity_Line.FindSet() then begin
+                            cmdsave := Warehouse_Activity_Line."No.";
+                            repeat
+                                if typesaveall = '' then
+                                    typesaveall := Format(Warehouse_Activity_Line."STF Zone Type")
+                                else
+                                    typesaveall += '|' + Format(Warehouse_Activity_Line."STF Zone Type");
+
+                            until Warehouse_Activity_Line.Next() = 0;
+                        end
                         else
                             error('code à barre non existant');
 
@@ -238,9 +248,11 @@ page 76000 "CB Vente"
                                     Assignment.Reset();
                                     Assignment.setrange("No.", Warehouse_Header."No.");
                                     Assignment.SetRange("Action Type", Assignment."Action Type"::place);
+                                    Assignment.setfilter("No. Type", typesaveall);
                                     Assignment.FilterGroup(-1);
                                     Assignment.SetRange(Status, Assignment.Status::"Activity Completed");
                                     Assignment.setfilter("User Assigned", '<>%1 & <> %2', usname, '');
+
                                     if not Assignment.FindSet() then begin
                                         Warehouse_Header_temp.init();
                                         Warehouse_Header_temp := Warehouse_Header;
@@ -998,6 +1010,7 @@ page 76000 "CB Vente"
         item_description: Text;
         box_flag_value: Text;
         cab_value: Text;
+        typesaveall: text;
 
         old_quantity, QuantityItem, quantitya : decimal;
         emplacement, Picked_barcode : text;
