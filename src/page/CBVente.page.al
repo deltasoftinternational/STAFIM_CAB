@@ -77,7 +77,7 @@ page 76000 "CB Vente"
                             if Picked_barcode = '' then
                                 error('vous devez scanner le code à barre');
                             Warehouse_Activity_Line.Reset();
-                            Warehouse_Activity_Line.setrange("picked barcode", Picked_barcode);
+                            Warehouse_Activity_Line.setrange("CB Picked barcode", Picked_barcode);
                             if Warehouse_Activity_Line.FindSet() then
                                 error('code à barre déja utilisé');
                         end
@@ -93,10 +93,10 @@ page 76000 "CB Vente"
                     if Warehouse_Activity_Line.findset() then
                         repeat
                             if Warehouse_Activity_Line."Action Type" = Warehouse_Activity_Line."Action Type"::Take then
-                                if not (Warehouse_Activity_Line."Picking validated") then
+                                if not (Warehouse_Activity_Line."CB Picking validated") then
                                     error('Veuillez valider tous les emplacements');
                             if role <> 'COL' then begin
-                                Warehouse_Activity_Line.Validate("Picked barcode", Picked_barcode);
+                                Warehouse_Activity_Line.Validate("CB Picked barcode", Picked_barcode);
                                 Warehouse_Activity_Line.Modify();
                             end;
                         until Warehouse_Activity_Line.Next() = 0;
@@ -146,7 +146,7 @@ page 76000 "CB Vente"
                         Warehouse_Activity_Line.reset();
                         Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
-                        Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                        Warehouse_Activity_Line.SetRange("CB Picked barcode", picked_barcode);
                         if Warehouse_Activity_Line.FindSet() then begin
                             cmdsave := Warehouse_Activity_Line."No.";
                             repeat
@@ -160,6 +160,20 @@ page 76000 "CB Vente"
                         else
                             error('code à barre non existant');
 
+                    end
+                    else begin
+                        Warehouse_Activity_Line.reset();
+                        Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
+                        Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
+                        Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                        if Warehouse_Activity_Line.FindSet() then
+                            repeat
+                                if typesavepick = '' then
+                                    typesavepick := Format(Warehouse_Activity_Line."STF Zone Type")
+                                else
+                                    typesavepick += '|' + Format(Warehouse_Activity_Line."STF Zone Type");
+
+                            until Warehouse_Activity_Line.next() = 0;
                     end;
 
                     Warehouse_Header.Reset();
@@ -421,10 +435,10 @@ page 76000 "CB Vente"
                         if role = 'COL' then begin
                             Warehouse_Activity_Line.SetFilter("STF Zone Type", typesave);
                             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
-                            Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                            Warehouse_Activity_Line.SetRange("CB Picked barcode", picked_barcode);
                         end
                         else begin
-                            Warehouse_Activity_Line.setrange("Picking validated", false);
+                            Warehouse_Activity_Line.setrange("CB Picking validated", false);
 
                             Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
                             Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
@@ -476,7 +490,7 @@ page 76000 "CB Vente"
                     Warehouse_Activity_Line.Reset();
                     Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
-                    Warehouse_Activity_Line.SetRange("Picking validated", false);
+                    Warehouse_Activity_Line.SetRange("CB Picking validated", false);
                     Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
                     Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
@@ -489,7 +503,7 @@ page 76000 "CB Vente"
                                 if Warehouse_Activity_Line."Warehouse Reason Code" = '' then
                                     error('vous devez choisir un code motif');
                             end;
-                            Warehouse_Activity_Line.Validate("Picking validated", true);
+                            Warehouse_Activity_Line.Validate("CB Picking validated", true);
                             Warehouse_Activity_Line.Modify();
                         until Warehouse_Activity_Line.next() = 0;
                     remplirempl();
@@ -570,10 +584,10 @@ page 76000 "CB Vente"
                     if role = 'COL' then begin
                         Warehouse_Activity_Line.setfilter("STF Zone Type", typesave);
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
-                        Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                        Warehouse_Activity_Line.SetRange("CB Picked barcode", picked_barcode);
                     end
                     else begin
-                        Warehouse_Activity_Line.SetRange("Picking validated", false);
+                        Warehouse_Activity_Line.SetRange("CB Picking validated", false);
 
 
                         Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
@@ -585,7 +599,7 @@ page 76000 "CB Vente"
                             if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
                                 if role = 'COL' then begin
                                     Warehouse_Activity_Line.Validate("STF Controlled Quantity", Warehouse_Activity_Line."Qty. Outstanding");
-                                    Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                                    Warehouse_Activity_Line.SetRange("cb Picked barcode", picked_barcode);
                                 end
                                 else
                                     Warehouse_Activity_Line.Validate("STF Picked Quantity", Warehouse_Activity_Line."Qty. Outstanding");
@@ -594,7 +608,7 @@ page 76000 "CB Vente"
                             else begin
                                 if role = 'COL' then begin
                                     Warehouse_Activity_Line.Validate("STF Controlled Quantity", newQuantity);
-                                    Warehouse_Activity_Line.SetRange("Picked barcode", picked_barcode);
+                                    Warehouse_Activity_Line.SetRange("cb Picked barcode", picked_barcode);
                                 end
                                 else
                                     Warehouse_Activity_Line.Validate("STF Picked Quantity", newQuantity);
@@ -842,7 +856,17 @@ page 76000 "CB Vente"
     var
         Assignment: Record "STF Wareh Activity Assignment";
         Assignment_user: Record "STF WMS Assigned User ADCS";
+        ZoneList: List of [Text];
+        ZoneValue: Text;
+        ZoneEnum: Enum "STF Zone Type";
+
+        useraffected: boolean;
+
     begin
+        if role = 'COL' then
+            ZoneList := typesaveall.Split('|')
+        else
+            ZoneList := typesavepick.Split('|');
         Assignment.Reset();
         Assignment.setrange("No.", cmdSave);
         Assignment.Setfilter(Status, '%1|%2|%3', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress");
@@ -858,6 +882,8 @@ page 76000 "CB Vente"
                         Assignment.Validate("User Assigned", usname);
                     Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
                     Assignment.Modify();
+
+
                 end
                 else begin
                     Assignment_user.Reset();
@@ -868,20 +894,105 @@ page 76000 "CB Vente"
                             Assignment.Validate("User Assigned", usname);
                         Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
                         Assignment.Modify();
+                        assignuser(Assignment);
 
                     end;
                 end;
-            until Assignment.Next() = 0;
+            until Assignment.Next() = 0
+        else begin
+            useraffected := false;
+            if role <> 'COL' then begin
+                foreach ZoneValue in ZoneList do begin
+                    if ZoneValue = '' then error('zone vide');
+                    if not Evaluate(ZoneEnum, ZoneValue) then
+                        Error('Invalid Zone Type: %1', ZoneValue);
+                    Assignment.Init();
+                    Assignment.Validate("No.", cmdSave);
+                    Assignment.Validate("Action Type", Assignment."Action Type"::take);
+                    Assignment_user.Reset();
+                    Assignment_user.setrange(name, usname);
+                    Assignment_user.setrange("Zone Type", ZoneEnum);
+                    if Assignment_user.FindSet() then begin
+
+                        Assignment_user.Reset();
+                        Assignment_user.SetRange(Name, usname);
+                        Assignment_user.SetRange("Zone Type", ZoneEnum);
+
+                        if Assignment_user.FindSet() then begin
+                            useraffected := true;
+                            Assignment.Validate("User Assigned", usname);
+                            Assignment.validate("No. Type", ZoneEnum);
+                            Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
+                            Assignment.Validate("Assignment Date", today);
+                            Assignment.Validate("Assignment Time", time);
+                            if Assignment.Insert(true) then assignuser(Assignment);
 
 
+                        end;
+                    end;
+                end;
+                if not useraffected then
+                    error('Veuillez vérifier les zones affectés sur cet utilisateur');
+            end
+            else
+                foreach ZoneValue in ZoneList do begin
+                    if ZoneValue = '' then error('zone vide');
+                    if not Evaluate(ZoneEnum, ZoneValue) then
+                        Error('Invalid Zone Type: %1', ZoneValue);
+                    Assignment.Init();
+                    Assignment.Validate("No.", cmdSave);
+                    Assignment.Validate("Action Type", Assignment."Action Type"::Place);
+
+
+                    Assignment.Validate("User Assigned", usname);
+                    Assignment.validate("No. Type", ZoneEnum);
+                    Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
+                    Assignment.Validate("Assignment Date", today);
+                    Assignment.Validate("Assignment Time", time);
+                    if Assignment.Insert(true) then;
+
+                end;
+        end;
+    end;
+
+    procedure assignuser(Assignment: Record "STF Wareh Activity Assignment")
+    var
+        WarehouseActivityHeader: Record "Warehouse Activity Header";
+
+    begin
+        if (WarehouseActivityHeader.get(WarehouseActivityHeader.Type::Pick, Assignment."No.")) then
+            case Assignment."No. Type" of
+                Assignment."No. Type"::"Small Item":
+                    begin
+                        WarehouseActivityHeader.validate("STF User ADCS Small Item", usname);
+                        WarehouseActivityHeader.Validate("STF Status Small Warehouse Act", WarehouseActivityHeader."STF Status Small Warehouse Act"::"Activity In Progress");
+                    end;
+                Assignment."No. Type"::"Big Item":
+                    begin
+                        WarehouseActivityHeader.validate("STF User ADCS Big Item", usname);
+                        WarehouseActivityHeader.Validate("STF Status Big Warehouse Act", WarehouseActivityHeader."STF Status Big Warehouse Act"::"Activity In Progress");
+
+                    end;
+                Assignment."No. Type"::"Precious Item":
+                    begin
+                        WarehouseActivityHeader.validate("STF User ADCS precious Item", usname);
+                        WarehouseActivityHeader.Validate("STF Status Precious Wareh Act", WarehouseActivityHeader."STF Status Precious Wareh Act"::"Activity In Progress");
+                    end;
+            end;
+        WarehouseActivityHeader.Modify(true);
     end;
 
     procedure addormodifycolis(warehouseline: record "Warehouse Activity Line")
     var
         Colis: record "CB Colis";
         lineno: integer;
-    begin
 
+        finalquantity: decimal;
+        warehouseline2: record "Warehouse Activity Line";
+    begin
+        finalquantity := 0;
+        if warehouseline2.get(warehouseline2."Action Type"::Take, warehouseline."No.", warehouseline."STF Source Line No") then
+            finalquantity := warehouseline2."STF Picked Quantity";
         if colisno = '' then
             error('veuillez scanner le colis');
         lineno := 10000;
@@ -894,6 +1005,8 @@ page 76000 "CB Vente"
         Colis.SetRange("Picking Line No", warehouseline."Line No.");
         if colis.FindSet() then begin
             colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
+            Colis.Validate("Picking line source", warehouseline."STF Source Line No");
+            colis.Validate("Final Quantity", finalquantity);
             colis.Modify();
         end
         else begin
@@ -904,6 +1017,8 @@ page 76000 "CB Vente"
             Colis.Validate("Picking No", warehouseline."No.");
             Colis.Validate("Picking Line No", warehouseline."Line No.");
             colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
+            Colis.Validate("Picking line source", warehouseline."STF Source Line No");
+            colis.Validate("Final Quantity", finalquantity);
             colis.Insert();
         end;
     end;
@@ -921,7 +1036,7 @@ page 76000 "CB Vente"
             Warehouse_Activity_Line.setcurrentkey("Bin Code");
             Warehouse_Activity_Line.SetAscending("Bin Code", true);
             Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::Pick);
-            Warehouse_Activity_Line.setrange("Picking validated", false);
+            Warehouse_Activity_Line.setrange("CB Picking validated", false);
             Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
             Warehouse_Activity_Line.SetRange("No.", cmdsave);
@@ -1011,6 +1126,7 @@ page 76000 "CB Vente"
         box_flag_value: Text;
         cab_value: Text;
         typesaveall: text;
+        typesavepick: text;
 
         old_quantity, QuantityItem, quantitya : decimal;
         emplacement, Picked_barcode : text;
