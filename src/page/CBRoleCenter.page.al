@@ -33,7 +33,20 @@ page 76003 "CB Role Center"
                 }
 
             }
+            group(Reception)
+            {
+                Caption = 'Réception';
+                Image = Calculator;
 
+                action(Connect8)
+                {
+                    Caption = 'Réception';
+                    RunObject = Page "CB Reception";
+                    ApplicationArea = All;
+                    Image = Calculator;
+                }
+
+            }
 
 
         }
