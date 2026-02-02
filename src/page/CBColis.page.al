@@ -40,7 +40,7 @@ page 76002 "CB Colis"
                 }
                 field("Final Quantity"; Rec."Final Quantity")
                 {
-                    Caption = 'Qte final ';
+                    Caption = 'Quantité pické';
                     DecimalPlaces = 0 : 5;
 
                     ApplicationArea = All;

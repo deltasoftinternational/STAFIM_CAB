@@ -12,13 +12,23 @@ tableextension 76001 "CB Warehouse Activity Line" extends "Warehouse Activity Li
             Editable = false;
             FieldClass = FlowField;
         }
-        field(76001; "Picking validated"; Boolean)
+        field(76001; "CB Picking validated"; Boolean)
         {
 
         }
-        field(76002; "Picked barcode"; text[250])
+        field(76002; "CB Picked barcode"; text[250])
         {
 
+        }
+        field(76003; "CB Nbre Colis picking"; Integer)
+        {
+            Caption = 'Colis';
+            CalcFormula = count("CB Colis" where(
+                  "Picking No" = field("No."),
+                  "Picking line source" = field("Line No.")
+              ));
+            Editable = false;
+            FieldClass = FlowField;
         }
     }
 }

@@ -37,6 +37,13 @@ table 76001 "CB Colis"
 
         }
 
+        field(76006; "Picking line source"; integer)
+        {
+            tablerelation = "Warehouse Activity Line"."STF Source Line No" where("No." = field("Picking No"));
+
+
+        }
+
 
 
 
