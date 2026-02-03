@@ -47,6 +47,20 @@ page 76003 "CB Role Center"
                 }
 
             }
+            group(Inventaire)
+            {
+                Caption = 'Inventaire';
+                Image = Calculator;
+
+                action(Connect9)
+                {
+                    Caption = 'Inventaire';
+                    RunObject = Page "CB Inventaire";
+                    ApplicationArea = All;
+                    Image = Calculator;
+                }
+
+            }
 
 
         }
