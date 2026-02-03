@@ -57,7 +57,17 @@ page 76001 "CB Historique"
                     ApplicationArea = All;
                     Editable = false;
                 }
-
+                field(Enregistrement; Rec.Enregistrement)
+                {
+                    caption = 'Enregistrement inventaire';
+                    ApplicationArea = All;
+                    Editable = false;
+                }
+                field(Inventaire; Rec.Qte)
+                {
+                    ApplicationArea = All;
+                    Editable = false;
+                }
                 field(Magasin; Rec.Magasin)
                 {
                     ApplicationArea = All;

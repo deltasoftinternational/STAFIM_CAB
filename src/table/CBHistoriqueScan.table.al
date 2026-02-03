@@ -43,6 +43,15 @@ table 76000 "CB Historique Scan"
         {
             initvalue = false;
         }
+        field(76011; Enregistrement; Integer)
+        {
+        }
+        field(76012; Comptage; text[10])
+        {
+        }
+        field(76013; Qte; decimal)
+        {
+        }
     }
     keys
     {
