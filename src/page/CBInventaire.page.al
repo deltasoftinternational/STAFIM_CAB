@@ -1,5 +1,6 @@
 page 76007 "CB Inventaire"
 {
+    caption = 'Inventaire';
     PageType = Card;
     ApplicationArea = All;
     UsageCategory = Administration;
@@ -7,12 +8,56 @@ page 76007 "CB Inventaire"
     {
         area(Content)
         {
-            usercontrol(html; "BC HTML")
+            usercontrol(html; "CB HTML")
             {
                 ApplicationArea = all;
                 trigger ControlReady()
                 begin
                     CurrPage.html.Render(Login());
+                end;
+
+                trigger remplirqte2(cab: JsonObject)
+                var
+                    cabq, emp : text;
+                    cabq_token, empToken : JsonToken;
+                    scan: record "CB historique scan";
+                    total_quantity: Decimal;
+
+                    QuantityItem: decimal;
+
+
+                begin
+                    cab.SelectToken('empl', empToken);
+                    empToken.WriteTo(emp);
+                    emp := emp.Replace('"', '');
+                    if cab_exists_flag = 0 then
+                        error('veuillez scanner l''article');
+                    cab.SelectToken('cabq', cabq_token);
+                    cabq_token.WriteTo(cabq);
+                    cabq := cabq.Replace('"', '');
+                    Evaluate(QuantityItem, cabq);
+
+                    Scan.reset();
+                    Scan.SetRange(Magasin, magSave);
+                    Scan.setrange(article, item_no_text);
+                    Scan.SetFilter("Document No.", invSave);
+                    Scan.SetFilter(Enregistrement, enregistrementSave);
+                    Scan.setrange(Emplacement, emp);
+                    total_quantity := 0;
+                    old_quantity := 0;
+                    if scan.findset() then begin
+                        repeat
+                            total_quantity := total_quantity + scan."Qte";
+                            if scan.user <> usersave then
+                                old_quantity := scan."Qte" + old_quantity;
+
+                        until scan.Next() = 0;
+                        total_quantity := total_quantity + QuantityItem;
+
+                    end
+                    else
+                        total_quantity := QuantityItem;
+                    CurrPage.html.autoComplete(item_no_text, item_description, emp, '', total_quantity, total_quantity, total_quantity, 'false');
                 end;
 
                 trigger CheckUser(user: JsonObject)
@@ -125,19 +170,12 @@ page 76007 "CB Inventaire"
                     b: Boolean;
                     itemNo: text;
                     Bin: Record Bin;
-                    INV: Record "CB Historique Scan";
-                    bb: Text;
-                    bbToken: JsonToken;
                     compToken: JsonToken;
                     comp: Text;
                     cabFirstPart: text;
                     cabFirstPartToken: JsonToken;
-                    qtyempl: Decimal;
                     cleanedCab: text;
                     cleanedBin: text;
-                    lines: Record "Phys. Invt. Order Line";
-                    rl: Record "Phys. Invt. Record Line";
-                    a: integer;
 
 
                 begin
@@ -145,9 +183,7 @@ page 76007 "CB Inventaire"
                     cabToken.WriteTo(cabv);
                     cabv := cabv.Replace('"', '');
 
-                    cab.SelectToken('b', bbToken);
-                    bbToken.WriteTo(bb);
-                    bb := bb.Replace('"', '');
+
 
 
                     cab.SelectToken('comp', compToken);
@@ -175,63 +211,36 @@ page 76007 "CB Inventaire"
                     if ((ICR.Find('-'))) then begin
                         b := true;
                         itemNo := ICR."Item No.";
+                        ITEM2.get(itemNo);
+                        item_description := ITEM2.Description;
                     end else begin
                         ITEM2.setfilter("No.", '%1|%2|%3', '' + cabv + '', '' + cleanedCab + '', '' + cleanedCab.trim() + '');
 
                         if ((ITEM2.Find('-'))) then begin
                             b := true;
                             itemNo := ITEM2."No.";
+                            item_description := ITEM2.Description;
 
                         end;
                     end;
 
+                    Bin.reset();
+                    Bin.Setrange("Location Code", magSave);
+                    Bin.setrange(Code, empl);
+                    if not Bin.Find('-') then begin
+                        CurrPage.html.cabVerif('');
+                        error('veuillez vérifier l''emplacement');
+                    end;
+                    emplsave := empl;
+                    if (not b) then
+                        CurrPage.html.cabVerif('')
 
-                    if (not b) then begin
-                        Bin.Setrange("Location Code", magSave);
-                        Bin.SetFilter(Code, '%1|%2|%3', '' + cabv + '', '' + cleanedBin + '', '' + cleanedBin.trim() + '');
-                        if Bin.Find('-') then begin
-                            CurrPage.html.cabVerif(Bin.code);
-                            rl.reset();
-                            rl.SetRange("Order No.", invSave);
-                            rl.SetFilter("Recording No.", enregistrementSave);
-                            rl.setrange(Recorded, false);
-                            if rl.FindSet() then
-                                a := RL.Count;
-                            CurrPage.html.nonscanned(Format(a));
-                        end
-                        else
-                            CurrPage.html.cabVerif('');
-                    end
                     else begin
-                        lines.Reset();
-                        lines.SetRange("Document No.", invSave);
-                        lines.SetRange("Item No.", itemNo);
-                        lines.Setrange("Bin Code", empl);
-                        lines.setfilter("No. Finished Rec.-Lines", '<>%1', 0);
-                        if comp = '2' then begin
-                            lines.Setrange("DLT Gap COUNT1 vs Calculated", 0);
-                            lines.setfilter("DLT Counting 1", '<>%1', 0);
-                            if lines.findSet() then
-                                Error('L''article est déja scanné correctement dans un autre comptage');
-                        end;
-                        if comp = '3' then begin
-                            lines.Setrange("DLT Gap COUNT2 vs COUNT1", 0);
-                            if lines.findSet() then
-                                if (lines."DLT Counting 1" <> 0) or (lines."DLT Counting 2" <> 0) or ((lines."DLT Gap COUNT1 vs Calculated" = 0) and (lines."DLT Counting 1" <> 0)) then
-                                    Error('L''article est déja scanné correctement dans un autre comptage');
-                        end;
-                        INV.reset();
-                        INV.SetRange(Magasin, magSave);
-                        INV.setrange(article, itemNo);
-                        INV.SetFilter("Document No.", invSave);
-                        INV.SetFilter(Enregistrement, enregistrementSave);
-                        INV.SetFilter(comptage, comp);
-                        INV.SetFilter(Emplacement, empl);
-                        INV.CalcSums(Qte);
-                        qtyempl := inv.Qte;
-                        if (item2.get(itemNo)) then
-                            CurrPage.html.autoComplete(item2."No.", item2.Description, '', item2."Base Unit of Measure", qtyempl + 1, item2.Inventory, item2.Inventory, bb);
+                        item_no_text := itemNo;
+                        cab_exists_flag := 1;
+                        CurrPage.html.focusqte();
                     end;
+
                 end;
 
                 trigger item(item: JsonObject)
@@ -260,7 +269,7 @@ page 76007 "CB Inventaire"
                     item.SelectToken('des', descToken);
                     item.SelectToken('qte', qteToken);
                     item.SelectToken('cab', cabToken);
-                    item.SelectToken('emp', empToken);
+                    item.SelectToken('empl', empToken);
                     item.SelectToken('comp', compToken);
 
 
@@ -293,11 +302,11 @@ page 76007 "CB Inventaire"
                     if (cabv <> '') and (desc <> '') and (emp <> '') then
                         if not (Evaluate(num, qte)) then
                             Message('La quantité saisie est incorrect!') else
-                            if (num < 1) then
-                                Message('La quantité saisie est inférieur à 1')
+                            if (num < 0) then
+                                Message('La quantité saisie est inférieur à 0')
                             else begin
                                 inv."Document Type" := inv."Document Type"::Inventaire;
-                                inv.Qte := num;
+                                inv.Qte := num - old_quantity;
                                 inv."Document No." := invSave;
                                 inv.user := userSave;
                                 inv.Magasin := magSave;
@@ -638,72 +647,92 @@ page 76007 "CB Inventaire"
 
     end;
 
-    procedure AddItem(inv: text[50]; mag: Text; comptage: Integer; compUs: Integer): Text
+    procedure AddItem(inv: Text[50]; mag: Text; comptage: Integer; compUs: Integer): Text
     var
-        out: Text;
+        out: TextBuilder;
     begin
-        out := '<!DOCTYPE html><html><head> <meta name="viewport" content="width=device-width, initial-scale=1"> <style>';
-        out += 'html, body {margin: 0; height: 100%; overflow: hidden; font-family: Arial, Helvetica, sans-serif; font-size:14px;}';
-        out += 'form {border: 3px solid #f1f1f1;}';
-        out += 'label { font-weight: bold; font-size: 16px; }';
-        out += 'input[type=text], input[type=password] { width: 90%; padding: 12px 10px; font-size: 16px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; }';
-        out += 'select { width: 90%; padding: 12px 10px; font-size: 16px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; }';
-        out += 'button { background-color: #04AA6D; color: white; padding: 15px 20px; margin: 8px 0; border: none; cursor: pointer; width: 100%; font-size: 16px; }';
-        out += 'button:hover { opacity: 0.8; }';
-        out += '.cancelbtn { width: auto; padding: 10px 15px; background-color: #f44336; }';
-        out += '.imgcontainer { text-align: center; margin: 10px 0 15px 0; }';
-        out += 'img.avatar { width: 40%; border-radius: 50%; }';
-        out += '.container { padding: 16px;opacity:0.5; }';
-        out += 'span.psw { float: right; padding-top: 13px; }';
-        out += '@media screen and (max-width: 1000px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } }';
-        out += '.loader { border: 16px solid #f3f3f3; border-radius: 50%; border-top: 16px solid blue; border-bottom: 16px solid blue; width: 120px; height: 120px; -webkit-animation: spin 2s linear infinite; animation: spin 2s linear infinite; position: absolute;z-index:10; top: 20%; left: 40%; text-align: center; font-size: 10px; }';
-        out += '@-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }';
-        out += '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-        out += '</style></head>';
-        out += '<body><center><b><label style="color : red;font-weight: bold; font-size: 17px;">Inventaire : ' + inv + '</label><label style="color : red;font-weight: bold; font-size: 17px;"> - Comptage : ' + Format(comptage) + ' </label><br><label style="color :cadetblue;font-size:17px;font-weight: bold;">Magasin : ' + mag + ' </label></b></center>  <div id="spinner"class="loader"></div><div id="container" class="container">';
-        out += '<input  id="comp" type="text" style="Display:none" name="comp" value="' + Format(comptage) + '"\>';
-        out += '<label for="cab" style="width:140px;display: inline-block;"><b>Code à barre </b></label>';
-        out += '<input type="text" tabindex="-1" enterkeyhint="done" style="width:180px;display: inline-block;" id="cab" type="text" name="cab" onKeyPress="if(event.keyCode==13) passerCab(this); "  autocomplete="off" required><br> ';
+        out.Append(
+            '<!DOCTYPE html><html><head>' +
+            '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+            '<style>' +
 
-        out += '<label for="article" style="width:140px;display: inline-block;"><b>Article      </b></label>';
-        out += '<input  style="width:180px;display: inline-block;" id="articleNo" type="text"  name="article" readonly="readonly" disabled="true" required><br> ';
-        out += '<label for="desc" style="width:140px;display: inline-block;vertical-align: middle;"><b>Description</b></label>';
-        out += '<textarea style="padding:12px 10px;width:180px;min-height:60px;display:inline-block;resize:vertical;border:1px solid #ccc;box-sizing:border-box;font-size:16px;vertical-align: middle;" id="desc" name="desc" readonly disabled></textarea><br>';
-        out += '<!--<div id=qt style="display: flex;flex-direction: row;justify-content: space-evenly;">-->';
-        out += '<!--<div id=qte1 style="">-->';
-        out += '<label style="width:140px;display: inline-block;" for="qte"><b>Quantité</b> <label id="unite"></label></label>  ';
-        out += '<input tabindex="-1" enterkeyhint="done" style="width:180px;display: inline-block;" id="qte" type="text"  name="qte"  onKeyDown="if(event.keyCode==27) qte.select();"  onKeyPress="if(event.keyCode==13) next();"  required><br>';
-        out += '<label style="width:140px;display: inline-block;" for="nonScanned"><b>Articles non scannés</b></label>';
-        out += '<input type="text" id="nonScanned" name="nonScanned" value="" readonly ';
-        out += 'onclick="handleNonScannedClick()" ';
-        out += 'style="cursor:pointer;width:180px;display:inline-block;background-color:#e0f7ff;';
-        out += 'border:2px solid #0077cc;color:#0077cc;text-align:center;font-weight:bold;border-radius:5px;';
-        out += 'transition:background 0.3s, border 0.3s;"><br>';
+            'body{font-family:Arial,Helvetica,sans-serif;background:#f9f9f9;margin:0;padding:0;}' +
 
+            '.container{max-width:margin:auto;padding:1rem;background:#fff;' +
+            'box-shadow:0 0 0.6rem rgba(0,0,0,0.1);}' +
 
+            'h2,h3{text-align:center;margin:0.6rem 0;}' +
 
-        out += '<!--</div>-->';
-        out += '<div id=qte2 style="display:none;">';
-        out += '<label for="qtei"><center><b>Q.Magasin</b></label> <label id="unite"></center></label> ';
-        out += '<input  id="qtei" type="text"  name="qtei" style="width:80%; " required readonly="readonly" >';
-        out += '<!--</div>-->';
-        out += '<div id=qte3 style="display:none;">';
-        out += '<label for="qtes"><center><b>Q.Stock</b></label> <label id="unite"></center></label> ';
-        out += '<input  id="qtes" type="text"  name="qtes"  style="width:80%;" required readonly="readonly">';
-        out += '</div>';
-        out += '</div>';
-        out += '';
-        out += '<select onclick="refreshEmpl()" style="width:160px;display: none;" id="emp" name="emp">';
-        out += '</select>';
-        out += '<input  id="empl" type="text" disabled="true" onchange="MAJEmp()"   name="empl"  style="padding: 8px 13px;width:335px;display: inline-block;"> <br>';
-        out += '<input  id="message" type="text" name="message"  style="padding: 3px 5px;width:335px;display: inline-block;  background: rgba(0, 0, 0, 0);  border: none; "><br>';
-        out += '<button onclick="reset()" style="width: 10%;float: left;">↻</button>';
-        out += '<button onclick="finish2()" style="background-color: cadetblue;width: 30%; margin-left:5px;">Aperçu</button>';
-        out += '<button onClick="next1()" id="btnvalid"  onKeyPress="passerCab(this)" style="width: 50%;float: right;">Valider</button>';
-        out += '<!--  <input  id="emp" type="text"  name="emp" readonly="readonly"> <button onclick="reset()">Réinitialiser</button>-->';
-        out += '<label id="cabcopy" style="display:none;"></label></body> </html>';
-        exit(out);
+            'label{display:block;margin-top:0.8rem;font-weight:bold;}' +
+
+            'input,textarea,select{width:100%;padding:0.7rem;font-size:1rem;' +
+            'border:0.08rem solid #ccc;border-radius:0.3rem;box-sizing:border-box;}' +
+
+            'textarea{resize:vertical;min-height:4rem;}' +
+
+            '.readonly{background:#f5f5f5;}' +
+
+            '.row{display:flex;gap:4%;width:100%;}' +
+            '.col{flex:1;}' +
+
+            '.buttons{display:flex;gap:5%;margin-top:1.2rem;}' +
+
+            'button{flex:1;padding:0.9rem;font-size:1rem;border:none;' +
+            'border-radius:0.3rem;cursor:pointer;color:#fff;background:#04AA6D;}' +
+
+            '.secondary{background:cadetblue;}' +
+
+            '@media(max-width:40rem){.row{flex-direction:column;}}' +
+
+            '</style></head>'
+        );
+
+        out.Append(
+            '<body><div class="container">' +
+
+            '<h2 style="color:red;">Inventaire : ' + inv +
+            ' - Comptage : ' + Format(comptage) + '</h2>' +
+
+            '<h3 style="color:cadetblue;">Magasin : ' + mag + '</h3>' +
+
+            '<input type="hidden" id="comp" value="' + Format(comptage) + '">' +
+            '<label  for="emp"><b>Emplacement</b></label> <input  id="empl" type="text" name="emp" onkeypress="if(event.keyCode==13) focuscab();">' +
+
+            '<label>Code à barre</label>' +
+            '<input id="cab" tabindex="-1" enterkeyhint="done" ' +
+
+            'onkeypress="if(event.keyCode==13) passerCab(this);"style="width:48%;" autocomplete="off"><input placeholder="Quantité" style="width:48%;margin-left:2%;" type="text" id="cabq" tabindex="-1" enterkeyhint="done" name="cabquantity" onKeyPress="if(event.keyCode==13) passerCabQuantity(this);" required>' +
+
+            '<label>Article</label>' +
+            '<input id="articleNo" class="readonly" readonly>' +
+
+            '<label>Description</label>' +
+            '<textarea id="desc" class="readonly" readonly></textarea>' +
+
+            '<label>Quantité</label>' +
+            '<input id="qte" tabindex="-1" enterkeyhint="done" ' +
+            'onkeypress="if(event.keyCode==13) next();">' +
+
+            '<label>Articles non scannés</label>' +
+            '<input id="nonScanned" readonly ' +
+            'onclick="handleNonScannedClick()" ' +
+            'style="cursor:pointer;background:#e0f7ff;font-weight:bold;text-align:center;">' +
+
+            '<input id="message" style="margin-top:0.6rem;border:none;background:transparent;">' +
+
+            '<div class="buttons">' +
+                '<button class="secondary" onclick="reset()">Réinitialiser</button>' +
+                '<button class="secondary" onclick="finish2()">Aperçu</button>' +
+                '<button onclick="next1()">Valider</button>' +
+            '</div>' +
+
+            '</div></body></html>'
+        );
+
+        exit(out.ToText());
     end;
+
+
 
     local procedure MAJOrderRecordLine(inv2: Record "CB Historique Scan")
     var
@@ -725,7 +754,7 @@ page 76007 "CB Inventaire"
         recordLine.SetRange("Bin Code", inv2.Emplacement);
         recordLine.SetRange("Location Code", inv2.Magasin);
         if recordLine.Find('-') then begin
-            recordLine.Validate("Quantity", inv2.Qte);
+            recordLine.Validate("Quantity", inv2.Qte + old_quantity);
             recordLine.Modify();
         end
         else begin
@@ -741,7 +770,7 @@ page 76007 "CB Inventaire"
             recordLine."Recording No." := inv2.Enregistrement;
             recordLine."Line No." += 10000 * (allRecordLine.count + 2);
             recordLine.Validate("Item No.", inv2.article);
-            recordline.validate(Quantity, inv2.Qte);
+            recordline.validate(Quantity, inv2.Qte + old_quantity);
             recordLine."Bin Code" := inv2.Emplacement;
             recordLine."Location Code" := inv2.Magasin;
             recordLine.Insert();
@@ -826,10 +855,12 @@ page 76007 "CB Inventaire"
     end;
 
     var
-        userSave: Text;
+        userSave, item_no_text, item_description, emplsave : Text;
         magSave: Text;
         invSave: Text;
         enregistrementSave: Text;
         empSave: Text;
         compSave: Text;
+        old_quantity: decimal;
+        cab_exists_flag: integer;
 }
