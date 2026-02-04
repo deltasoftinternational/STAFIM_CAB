@@ -1,4 +1,4 @@
-controladdin "BC HTML"
+controladdin "CB HTML"
 {
     StartupScript = 'JS/startup.js';
     Scripts = 'JS/scripts.js';
@@ -17,9 +17,12 @@ controladdin "BC HTML"
     event finish2(finish: JsonObject);
     event comptage(compt: JsonObject);
     event CheckCAB(cab: JsonObject);
+    event remplirqte2(cab: JsonObject);
     //<<DELTA OB
     //defining the js function WhenLoaded as procedure so it can be called in the page code
     procedure WhenLoaded();
+    procedure focusqte();
+    procedure focusemp();
     //>>DELTA OB
     procedure Render(HTML: Text);
     procedure nonscanned(Amount: Text);

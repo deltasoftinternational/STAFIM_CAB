@@ -17,9 +17,7 @@ function Render(html) {
 }
 setTimeout(function() { selectQte(); }, 1000);
 
-function selectQte() {
-    qte.select();
-}
+function selectQte() {}
 
 function selectionner() { if (event.keyCode === 13) { selectQte() } }
 
@@ -27,7 +25,6 @@ function cabVerif(codeBin) {
     var cab = document.getElementById('cab');
     var article = document.getElementById('articleNo');
     var quant = document.getElementById('qte');
-    var quanti = document.getElementById('qtei');
     var desc = document.getElementById('desc');
     var empl = document.getElementById('empl');
     var input = document.getElementById("nonScanned");
@@ -36,7 +33,6 @@ function cabVerif(codeBin) {
         article.value = "";
         //input.value = "";
         quant.value = "";
-        quanti.value = "";
         desc.value = "";
         cab.focus();
         if (codeBin != "") {
@@ -49,13 +45,11 @@ function cabVerif(codeBin) {
 }
 
 function next1() {
+
     var cab = document.getElementById('cab');
     var article = document.getElementById('articleNo');
     var desc = document.getElementById('desc');
     var qte = document.getElementById('qte');
-    var qtei = document.getElementById('qtei');
-    var emp = document.getElementById('emp');
-    var qtes = document.getElementById('qtes');
     var comp = document.getElementById('comp');
     var empl = document.getElementById('empl');
     const item = {
@@ -63,10 +57,9 @@ function next1() {
         "des": desc.value,
         "qte": qte.value,
         "cab": cab.value,
-        "emp": empl.value,
+        "empl": empl.value,
         "comp": comp.value
     }
-
 
     cab.innerHTML = "";
     Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('item', [item]);
@@ -77,42 +70,19 @@ function next1() {
 }
 
 function autoComplete(itemNo, descv, emps, unit, qte, qti, qtes, bb) {
-    var empst = [];
     var article = document.getElementById('articleNo');
     var desc = document.getElementById('desc');
-    var labelEmp = document.getElementById('labelEmp');
-    var unite = document.getElementById('unite');
-    var emp = document.getElementById('emp');
     var empl = document.getElementById('empl');
     var quant = document.getElementById('qte');
-    var quanti = document.getElementById('qtei');
-    var quants = document.getElementById('qtes');
+
     var btnvalid = document.getElementById('btnvalid');
+
     if (empl.value != '') {
-        emp.innerHTML = "";
         article.value = itemNo;
         desc.value = descv;
-        quants.value = qtes;
+        quant.value = qtes;
 
 
-
-        if (bb === "false" || cabcopy.innerText == "") {
-            quant.value = qte;
-            quanti.value = qti;
-        } else {
-            if (quant.value != "") {
-                quant.value = parseInt(quant.value) + 1;
-            } else {
-                quant.value = qte;
-                quanti.value = qti;
-            }
-        }
-
-
-
-        if (bb) {
-            btnvalid.focus();
-        }
 
         next1();
 
@@ -137,10 +107,54 @@ function passerQte(enCours) {
 
 }
 
-function passerCab(enCours) {
+function focuscab() {
+    var cabq = document.getElementById('cab');
+    cabq.focus();
+    cabq.select();
+}
 
+function focusqte() {
+    var cabq = document.getElementById('cabq');
+    cabq.focus();
+    cabq.select();
+}
+
+function focusemp() {
+    var empl = document.getElementById('empl');
+    empl.focus();
+    empl.select();
+}
+
+function passerCabQuantity() {
+    var cab = document.getElementById('cab');
+    var cabq = document.getElementById('cabq');
+    var empl = document.getElementById('empl');
     cab.focus();
     cab.select();
+    const item = {
+        "cabq": cabq.value,
+        "empl": empl.value
+    }
+
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('remplirqte2', [item]);
+
+
+}
+
+function passerCab(enCours) {
+    var cab = document.getElementById('cab');
+    var comp = document.getElementById('comp');
+    var empl = document.getElementById('empl');
+
+
+    const item = {
+        "cab": cab.value,
+        "comp": comp.value,
+        "cabFirstPart": cab.value,
+        "empl": empl.value
+    }
+
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckCAB', [item]);
 }
 
 function go() {
@@ -184,7 +198,6 @@ function WhenLoaded() {
     var article = document.getElementById('articleNo');
     var desc = document.getElementById('desc');
     var qte = document.getElementById('qte');
-    var qtes = document.getElementById('qtes');
     var cabcopy = document.getElementById('cabcopy');
     var comp = document.getElementById('comp');
     var empl = document.getElementById('empl');
@@ -192,9 +205,6 @@ function WhenLoaded() {
     var b = true;
     var cabSplit;
     var cabFirstPart;
-    var cabLastPart;
-    var cabTosend;
-
     cab.addEventListener('keypress', function(e) {
 
 
@@ -207,7 +217,6 @@ function WhenLoaded() {
                 //input.value="";
                 desc.value = "";
                 qte.value = "";
-                qtes.value = "";
 
             } else {
 
@@ -232,7 +241,7 @@ function WhenLoaded() {
             next1();
         }
     });
-    cab.focus();
+    empl.focus();
 
 }
 
@@ -241,9 +250,6 @@ function next() {
     var article = document.getElementById('articleNo');
     var desc = document.getElementById('desc');
     var qte = document.getElementById('qte');
-    var qtei = document.getElementById('qtei');
-    var emp = document.getElementById('emp');
-    var qtes = document.getElementById('qtes');
     var comp = document.getElementById('comp');
     var empl = document.getElementById('empl');
     var input = document.getElementById("nonScanned");
@@ -254,7 +260,7 @@ function next() {
         "des": desc.value,
         "qte": qte.value,
         "cab": cab.value,
-        "emp": empl.value,
+        "empl": empl.value,
         "comp": comp.value
     }
     if (article.value != '') {
@@ -271,10 +277,7 @@ function next() {
         //input.value="";
         desc.value = "";
         qte.value = "";
-        qtei.value = "";
-        qtes.value = "";
         cab.value = "";
-        emp.value = "";
     }
 
 
@@ -321,18 +324,13 @@ function reset() {
     var article = document.getElementById('articleNo');
     var desc = document.getElementById('desc');
     var qte = document.getElementById('qte');
-    var qtei = document.getElementById('qtei');
-    var qtes = document.getElementById('qtes');
     var empl = document.getElementById('empl');
     var input = document.getElementById("nonScanned");
     article.value = "";
     desc.value = "";
     qte.value = "";
-    qtei.value = "";
-    qtes.value = "";
     cab.value = "";
     cab.focus();
-    emp.value = "";
     input.value = "";
     empl.value = "";
     changeColor('White');
@@ -341,10 +339,8 @@ function reset() {
 
 function refreshEmpl() {
     var articleNo = document.getElementById('articleNo');
-    var emp = document.getElementById('emp');
     var empl = document.getElementById('empl');
     var comp = document.getElementById('comp');
-    empl.value = emp.value;
 
     const binQty = {
         "comp": comp.value,
@@ -358,15 +354,11 @@ function refreshEmpl() {
 }
 
 function MAJEmp() {
-    var emp = document.getElementById('emp');
     var empl = document.getElementById('empl');
-    emp.value = "";
-    emp.innerHTML = "";
     var opt = document.createElement("option");
     opt
     opt.value = empl.value;
     opt.innerHTML = empl.value;
-    emp.appendChild(opt);
 }
 
 function changeEmpl() {
@@ -383,8 +375,6 @@ function UpdateQty(itemNo, descv, unit, qte, qti, qtes, bb) {
     var labelEmp = document.getElementById('labelEmp');
     var unite = document.getElementById('unite');
     var quant = document.getElementById('qte');
-    var quanti = document.getElementById('qtei');
-    var quants = document.getElementById('qtes');
     article.value = itemNo;
     desc.value = descv;
     quant.value = qte;
@@ -392,10 +382,7 @@ function UpdateQty(itemNo, descv, unit, qte, qti, qtes, bb) {
 
 
 
-    if (emps == '') {
-        emp.style.display = "width:120px;display: inline-block;";
-        labelEmp.style.display = "width:120px;display: inline-block;";
-    }
+    if (emps == '') {}
     unite.innerHTML = '(' + unit + ')';
 }
 
