@@ -10,7 +10,7 @@ pageextension 76000 "CB Authentification" extends "ADCS Users" //7710
         {
 
 
-            field("CB BC Password"; Rec."CB Password")
+            field("CB Password"; Rec."CB Password")
             {
                 Caption = 'Mot de passe';
                 ExtendedDatatype = Masked;

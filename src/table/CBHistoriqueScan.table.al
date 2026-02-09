@@ -52,11 +52,15 @@ table 76000 "CB Historique Scan"
         field(76013; Qte; decimal)
         {
         }
+        field(76014; dest; Code[20])
+        {
+            caption = 'Emplacement déstinataire';
+        }
     }
     keys
     {
 
-        key(key1; article, "Document No.", Magasin, Emplacement, user, "Document Type", Cancelled)
+        key(key1; article, "Document No.", Magasin, Emplacement, user, "Document Type", Cancelled, dest)
         {
         }
     }
