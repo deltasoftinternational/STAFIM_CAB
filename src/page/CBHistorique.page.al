@@ -78,6 +78,11 @@ page 76001 "CB Historique"
                     ApplicationArea = All;
                     Editable = false;
                 }
+                field(dest; Rec.dest)
+                {
+                    ApplicationArea = All;
+                    Editable = false;
+                }
 
                 field(user; Rec.user)
                 {

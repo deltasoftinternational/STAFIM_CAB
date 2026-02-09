@@ -16,6 +16,11 @@ enum 76000 "CB scantype"
         caption = 'Vente';
 
     }
+    value(4; "Reclassement")
+    {
+        caption = 'Reclassement';
+
+    }
 
 
 }
