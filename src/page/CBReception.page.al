@@ -73,54 +73,17 @@ page 76006 "CB Reception"
                     scan: page "CB scan barcode";
 
                 begin
-                    if role <> 'COL' then
-                        if scan.RunModal() = ACTION::OK then begin
-                            Picked_barcode := scan.getbarcode();
-                            if Picked_barcode = '' then
-                                error('vous devez scanner le code à barre');
-                            Warehouse_Activity_Line.Reset();
-                            Warehouse_Activity_Line.setrange("STF Colis", Picked_barcode);
-                            if Warehouse_Activity_Line.FindSet() then
-                                error('code à barre déja utilisé');
-                        end
-                        else
-                            error('vous devez scanner le code à barre');
-
-
-                    Warehouse_Activity_Line.reset();
-                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
-                    Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
-                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
-                    if Warehouse_Activity_Line.findset() then
-                        repeat
-                            if Warehouse_Activity_Line."Action Type" = Warehouse_Activity_Line."Action Type"::Take then
-                                if not (Warehouse_Activity_Line."CB Picking validated") then
-                                    error('Veuillez valider tous les emplacements');
-                            if role <> 'COL' then begin
-                                Warehouse_Activity_Line.Validate("STF Colis", Picked_barcode);
-                                Warehouse_Activity_Line.Modify();
-                            end;
-                        until Warehouse_Activity_Line.Next() = 0;
                     Assignment.Reset();
-                    Assignment.setrange("No.", cmdSave);
-                    if role = 'COL' then
-                        Assignment.SetRange("Action Type", Assignment."Action Type"::Place)
-                    else begin
-                        Assignment.SetRange("User Assigned", usname);
-                        Assignment.SetRange("Action Type", Assignment."Action Type"::take);
-                    end;
-                    if role = 'COL' then
-                        Assignment.setfilter("No. Type", typesaveall);
-                    if Assignment.FindSet() then
-                        repeat
-                            if role = 'COL' then
-                                Assignment.validate("User Assigned", usname);
-                            Assignment.Validate(Status, Assignment.Status::"Activity Completed");
-                            Assignment.Modify();
-                        until Assignment.Next() = 0;
-                    cmdSave := '';
-                    CurrPage.html.Render(Login2(usname));
-                    CurrPage.html.receptionfocus();
+                    Assignment.SetRange("Activity Type", Assignment."Activity Type"::"Put-away");
+                    Assignment.setfilter("User Assigned", usname);
+                    Assignment.setrange("No.", picked_barcode);
+                    Assignment.SetRange("STF Colis", true);
+                    Assignment.SetRange("Action Type", Assignment."Action Type"::Take);
+                    if Assignment.FindSet() then begin
+                        Assignment.Status := Assignment.Status::"Activity Completed";
+                        Assignment.Modify();
+                    end
+
                 end;
 
                 trigger info(info: JsonObject)
@@ -154,18 +117,14 @@ page 76006 "CB Reception"
                         error('code à barre non existant');
 
 
-                    Warehouse_Header.Reset();
-                    Warehouse_Header.SetRange("No.", cmdsave);
                     typesave := '';
                     ADCS_User.SetRange(Name, usname);
                     if ADCS_User.FindSet() then begin
-                        Warehouse_Header.SetRange(Type, Warehouse_Header.Type::Pick);
-                        Warehouse_Header.SetRange("Location Code", ADCS_User."STF Location");
 
-
-
+                        assigned(usname, picked_barcode);
                         CurrPage.html.Render(AddItem(cmdsave));
                         CurrPage.html.WhenLoaded();
+
                     end
                     else
                         Message('Veuillez affecter l''utilisateur');
@@ -593,7 +552,7 @@ page 76006 "CB Reception"
         EXIT(Format(out));
     end;
 
-    procedure assigned()
+    procedure assigned(user: text; barcode: text): boolean
     var
         Assignment: Record "STF Wareh Activity Assignment";
         Assignment_user: Record "STF WMS Assigned User ADCS";
@@ -604,96 +563,42 @@ page 76006 "CB Reception"
         useraffected: boolean;
 
     begin
-        if role = 'COL' then
-            ZoneList := typesaveall.Split('|')
-        else
-            ZoneList := typesavepick.Split('|');
         Assignment.Reset();
-        Assignment.setrange("No.", cmdSave);
-        Assignment.Setfilter(Status, '%1|%2|%3', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress");
-        if role = 'COL' then
-            Assignment.SetRange("Action Type", Assignment."Action Type"::place)
-        else
-            Assignment.SetRange("Action Type", Assignment."Action Type"::take);
-
-        if Assignment.FindSet() then
-            repeat
-                if role = 'COL' then begin
-                    if Assignment."User Assigned" = '' then
-                        Assignment.Validate("User Assigned", usname);
-                    Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
-                    Assignment.Modify();
-
-
-                end
-                else begin
-                    Assignment_user.Reset();
-                    Assignment_user.setrange(name, usname);
-                    Assignment_user.setrange("Zone Type", Assignment."No. Type");
-                    if Assignment_user.FindSet() then begin
-                        if Assignment."User Assigned" = '' then
-                            Assignment.Validate("User Assigned", usname);
-                        Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
-                        Assignment.Modify();
-                        assignuser(Assignment);
-
-                    end;
-                end;
-            until Assignment.Next() = 0
+        Assignment.SetRange("Activity Type", Assignment."Activity Type"::"Put-away");
+        Assignment.setfilter("User Assigned", '<>%1&<>%2', user, '');
+        Assignment.setrange("No.", barcode);
+        Assignment.SetRange("STF Colis", true);
+        Assignment.SetRange("Action Type", Assignment."Action Type"::Take);
+        if Assignment.FindSet() THEN
+            Error('Colis assigné  à l''utilisateur %1', Assignment."User Assigned")
         else begin
-            useraffected := false;
-            if role <> 'COL' then begin
-                foreach ZoneValue in ZoneList do begin
-                    if ZoneValue = '' then error('zone vide');
-                    if not Evaluate(ZoneEnum, ZoneValue) then
-                        Error('Invalid Zone Type: %1', ZoneValue);
-                    Assignment.Init();
-                    Assignment.Validate("No.", cmdSave);
-                    Assignment.Validate("Action Type", Assignment."Action Type"::take);
-                    Assignment_user.Reset();
-                    Assignment_user.setrange(name, usname);
-                    Assignment_user.setrange("Zone Type", ZoneEnum);
-                    if Assignment_user.FindSet() then begin
-
-                        Assignment_user.Reset();
-                        Assignment_user.SetRange(Name, usname);
-                        Assignment_user.SetRange("Zone Type", ZoneEnum);
-
-                        if Assignment_user.FindSet() then begin
-                            useraffected := true;
-                            Assignment.Validate("User Assigned", usname);
-                            Assignment.validate("No. Type", ZoneEnum);
-                            Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
-                            Assignment.Validate("Assignment Date", today);
-                            Assignment.Validate("Assignment Time", time);
-                            if Assignment.Insert(true) then assignuser(Assignment);
-
-
-                        end;
-                    end;
-                end;
-                if not useraffected then
-                    error('Veuillez vérifier les zones affectés sur cet utilisateur');
+            Assignment.Reset();
+            Assignment.SetRange("Activity Type", Assignment."Activity Type"::"Put-away");
+            Assignment.setfilter("User Assigned", user);
+            Assignment.setrange("No.", barcode);
+            Assignment.SetRange("STF Colis", true);
+            Assignment.SetRange("Action Type", Assignment."Action Type"::Take);
+            if Assignment.FindSet() then begin
+                if Assignment.Status = Assignment.Status::"Activity Completed" then
+                    Error('colis terminée');
+                Assignment.Status := Assignment.Status::"Activity In Progress";
+                Assignment.Modify();
             end
-            else
-                foreach ZoneValue in ZoneList do begin
-                    if ZoneValue = '' then error('zone vide');
-                    if not Evaluate(ZoneEnum, ZoneValue) then
-                        Error('Invalid Zone Type: %1', ZoneValue);
-                    Assignment.Init();
-                    Assignment.Validate("No.", cmdSave);
-                    Assignment.Validate("Action Type", Assignment."Action Type"::Place);
+            else begin
+                Assignment.init();
+                Assignment.validate("Activity Type", Assignment."Activity Type"::"Put-away");
+                Assignment.validate("User Assigned", user);
+                Assignment.validate("No.", barcode);
+                Assignment.validate("Action Type", Assignment."Action Type"::Take);
+                Assignment.Status := Assignment.Status::"Activity In Progress";
+                Assignment."STF Colis" := true;
+                Assignment."Assignment Date" := today;
+                Assignment.Insert();
 
-
-                    Assignment.Validate("User Assigned", usname);
-                    Assignment.validate("No. Type", ZoneEnum);
-                    Assignment.Validate(Status, Assignment.Status::"Activity In Progress");
-                    Assignment.Validate("Assignment Date", today);
-                    Assignment.Validate("Assignment Time", time);
-                    if Assignment.Insert(true) then;
-
-                end;
+            end;
         end;
+
+        //Assignment.SetFilter(status,);
     end;
 
     procedure assignuser(Assignment: Record "STF Wareh Activity Assignment")
@@ -804,7 +709,7 @@ page 76006 "CB Reception"
         out.APPEND('<input id="message" type="text" name="message" style="width:240px;display: inline-block;font-size:16px; background: rgba(0, 0, 0, 0); border: none;"><br>');
         out.APPEND('<div>');
 
-        out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button> </div>');
+        out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button><button onclick="terminer()" style="margin-left:4%;background-color: red;width:40% ">Terminer</button> </div>');
         out.APPEND('<div id="myModal" class="modal";> <div class="modal-content" style="margin-top:220px;"> <p> Le reception a été terminée avec succès. Souhaitez-vous continuer ou fermer ?</p> <button class="modal-btn" onclick="fermerModal()">Sortir de lapplication</button> <button id="cmdv" name="cmdv" type="text" onclick="back()" class="modal-btn">Revenir au menu précédent</button> </div> </div>');
 
         out.APPEND('</body> </html>');

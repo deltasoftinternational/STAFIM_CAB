@@ -101,6 +101,7 @@ page 76000 "CB Vente"
                             end;
                         until Warehouse_Activity_Line.Next() = 0;
                     Assignment.Reset();
+                    Assignment.setrange("Activity type", Assignment."Activity Type"::Pick);
                     Assignment.setrange("No.", cmdSave);
                     if role = 'COL' then
                         Assignment.SetRange("Action Type", Assignment."Action Type"::Place)
@@ -241,6 +242,7 @@ page 76000 "CB Vente"
                         end;
                         if role = 'COL' then begin
                             Wareh_Activity_Assignment.Reset();
+                            Wareh_Activity_Assignment.SetRange("Activity Type", Wareh_Activity_Assignment."Activity Type"::Pick);
                             Wareh_Activity_Assignment.SetRange("No.", cmdSave);
                             Wareh_Activity_Assignment.SetRange("Action Type", Wareh_Activity_Assignment."Action Type"::Take);
                             Wareh_Activity_Assignment.setrange(Status, Wareh_Activity_Assignment.Status::"Activity Completed");
@@ -260,6 +262,7 @@ page 76000 "CB Vente"
                             if Warehouse_Header.FindSet() then
                                 repeat
                                     Assignment.Reset();
+                                    Assignment.SetRange("Activity Type", Assignment."Activity Type"::Pick);
                                     Assignment.setrange("No.", Warehouse_Header."No.");
                                     Assignment.SetRange("Action Type", Assignment."Action Type"::place);
                                     Assignment.setfilter("No. Type", typesaveall);
@@ -868,6 +871,7 @@ page 76000 "CB Vente"
         else
             ZoneList := typesavepick.Split('|');
         Assignment.Reset();
+        Assignment.setrange("Activity Type", Assignment."Activity Type"::Pick);
         Assignment.setrange("No.", cmdSave);
         Assignment.Setfilter(Status, '%1|%2|%3', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress");
         if role = 'COL' then
@@ -907,6 +911,8 @@ page 76000 "CB Vente"
                     if not Evaluate(ZoneEnum, ZoneValue) then
                         Error('Invalid Zone Type: %1', ZoneValue);
                     Assignment.Init();
+                    Assignment.Validate("Activity Type", Assignment."Activity Type"::Pick);
+
                     Assignment.Validate("No.", cmdSave);
                     Assignment.Validate("Action Type", Assignment."Action Type"::take);
                     Assignment_user.Reset();
