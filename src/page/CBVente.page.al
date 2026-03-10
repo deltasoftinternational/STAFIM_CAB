@@ -873,11 +873,17 @@ page 76000 "CB Vente"
         Assignment.Reset();
         Assignment.setrange("Activity Type", Assignment."Activity Type"::Pick);
         Assignment.setrange("No.", cmdSave);
-        Assignment.Setfilter(Status, '%1|%2|%3', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress");
-        if role = 'COL' then
+        Assignment.Setfilter(Status, '%1|%2|%3|%4', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress", Assignment.Status::" ");
+        if role = 'COL' then begin
+            Assignment.Setfilter(Status, '%1|%2|%3|%4', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress", Assignment.Status::" ");
             Assignment.SetRange("Action Type", Assignment."Action Type"::place)
-        else
+
+        end
+        else begin
+            Assignment.Setfilter(Status, '%1|%2|%3', Assignment.Status::Assigned, Assignment.Status::"Waiting for assignment", Assignment.Status::"Activity In Progress");
             Assignment.SetRange("Action Type", Assignment."Action Type"::take);
+
+        end;
 
         if Assignment.FindSet() then
             repeat
@@ -946,6 +952,8 @@ page 76000 "CB Vente"
                     if not Evaluate(ZoneEnum, ZoneValue) then
                         Error('Invalid Zone Type: %1', ZoneValue);
                     Assignment.Init();
+                    Assignment.Validate("Activity Type", Assignment."Activity Type"::Pick);
+
                     Assignment.Validate("No.", cmdSave);
                     Assignment.Validate("Action Type", Assignment."Action Type"::Place);
 
