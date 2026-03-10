@@ -47,7 +47,7 @@ page 76003 "CB Role Center"
                 }
 
             }
-            group(Inventaire)
+            /*group(Inventaire)
             {
                 Caption = 'Inventaire';
                 Image = Calculator;
@@ -56,6 +56,20 @@ page 76003 "CB Role Center"
                 {
                     Caption = 'Inventaire';
                     RunObject = Page "CB Inventaire";
+                    ApplicationArea = All;
+                    Image = Calculator;
+                }
+
+            }*/
+            group(Reclassement)
+            {
+                Caption = 'Reclassement';
+                Image = Calculator;
+
+                action(Connect10)
+                {
+                    Caption = 'Reclassement';
+                    RunObject = Page "CB Reclassement";
                     ApplicationArea = All;
                     Image = Calculator;
                 }
