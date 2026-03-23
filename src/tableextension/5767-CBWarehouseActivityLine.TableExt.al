@@ -30,6 +30,13 @@ tableextension 76001 "CB Warehouse Activity Line" extends "Warehouse Activity Li
             Editable = false;
             FieldClass = FlowField;
         }
+        field(76004; "CB Scanned Quantity"; decimal)
+        {
+            Caption = 'Quantité scan';
+        
+            Editable = false;
+       
+        }
     }
 }
 
