@@ -1,16 +1,16 @@
-page 76006 "CB Reception"
+page 76011 "CB bin"
 {
     PageType = Card;
     ApplicationArea = All;
     UsageCategory = Administration;
-    caption = 'Scan réception';
+    caption = 'Scan article';
 
     layout
     {
         area(Content)
         {
 
-            usercontrol(html; "CB HTML6")
+            usercontrol(html; "CB HTML7")
             {
                 ApplicationArea = all;
                 trigger ControlReady()
@@ -40,26 +40,8 @@ page 76006 "CB Reception"
                     usname := usname.Replace('"', '');
                     uspass := uspass.Replace('"', '');
                     if ADCS_USER.Get(usname) then begin
-                        // if ADCS_USER."CB Password" <> uspass then
-                        //     Error('Mot de passe incorrect !');
-                        // AssignedUser.Reset();
-                        // AssignedUser.SetRange(Name, usname);
-                        // if role = 'PICK' then begin
-                        //     AssignedUser.SetFilter("Zone Type", '%1|%2|%3', AssignedUser."Zone Type"::"Big Item", AssignedUser."Zone Type"::"Precious Item", AssignedUser."Zone Type"::"Small Item");
-                        //     if not AssignedUser.FindSet() then
-                        //         error('L''untilisateur n''est pas afecté sur une zone de picking');
-                        // end;
-                        // if role = 'CROSS' then begin
-                        //     AssignedUser.SetRange("Zone Type", AssignedUser."Zone Type"::"Cross Item");
-                        //     if not AssignedUser.FindSet() then
-                        //         error('L''untilisateur n''est pas afecté sur Cross Item');
-                        // end;
-                        // if role = 'COL' then begin
-                        //     AssignedUser.SetRange("Zone Type", AssignedUser."Zone Type"::" ");
-                        //     if not AssignedUser.FindSet() then
-                        //         error('L''untilisateur n''est pas un controlleur');
+
                         magsave := ADCS_USER."STF Location";
-                        // end;
                         CurrPage.html.Render(Login2(usname));
                     end
                     else
@@ -73,30 +55,16 @@ page 76006 "CB Reception"
                     scan: page "CB scan barcode";
 
                 begin
-                    Warehouse_Activity_Line.Reset();
-                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
-                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
-                    Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
-                    Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
-
-                    if Warehouse_Activity_Line.findset() then
-                        repeat
-
-                            Warehouse_Activity_Line.validate("STF Warehouse Put-Away Status", Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity Completed");
-                            Warehouse_Activity_Line.Modify();
-                        until Warehouse_Activity_Line.Next() = 0;
-
-                    // Assignment.Reset();
-                    // Assignment.SetRange("Activity Type", Assignment."Activity Type"::"Put-away");
-                    // Assignment.setfilter("User Assigned", usname);
-                    // Assignment.setrange("No.", picked_barcode);
-                    // Assignment.SetRange("STF Colis", true);
-                    // Assignment.SetRange("Action Type", Assignment."Action Type"::Take);
-                    // if Assignment.FindSet() then begin
-                    //     Assignment.Status := Assignment.Status::"Activity Completed";
-                    //     Assignment.Modify();
-                    // end;
-                    CurrPage.html.Render(Login());
+                    Assignment.Reset();
+                    Assignment.SetRange("Activity Type", Assignment."Activity Type"::"Put-away");
+                    Assignment.setfilter("User Assigned", usname);
+                    Assignment.setrange("No.", picked_barcode);
+                    Assignment.SetRange("STF Colis", true);
+                    Assignment.SetRange("Action Type", Assignment."Action Type"::Take);
+                    if Assignment.FindSet() then begin
+                        Assignment.Status := Assignment.Status::"Activity Completed";
+                        Assignment.Modify();
+                    end
 
                 end;
 
@@ -111,7 +79,6 @@ page 76006 "CB Reception"
                     // Assignment: Record "STF Wareh Activity Assignment";
                     // assigned_user: record "STF WMS Assigned User ADCS";
                     Warehouse_Activity_Line: Record "Warehouse Activity Line";
-
                 begin
                     colisno := '';
                     Warehouse_Header.init();
@@ -130,19 +97,13 @@ page 76006 "CB Reception"
 
                     else
                         error('code à barre non existant');
-                    Warehouse_Activity_Line.reset();
-                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
-                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
-                    Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
-                    Warehouse_Activity_Line.SetRange("Location Code", magsave);
-                    Warehouse_Activity_Line.setfilter("STF Warehouse Put-Away Status", '<>%1', Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity Completed");
-                    if not Warehouse_Activity_Line.findset then
-                        error('Colis terminé');
+
+
                     typesave := '';
                     ADCS_User.SetRange(Name, usname);
                     if ADCS_User.FindSet() then begin
 
-                        //assigned(usname, picked_barcode);
+                        assigned(usname, picked_barcode);
                         CurrPage.html.Render(AddItem(cmdsave));
                         CurrPage.html.WhenLoaded();
 
@@ -288,14 +249,11 @@ page 76006 "CB Reception"
 
                         Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
                         Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
+
                         if Warehouse_Activity_Line.findset() then begin
                             emplacement := Warehouse_Activity_Line."Bin Code";
                             CurrPage.html.rempliremp(emplacement);
                             repeat
-                                if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then
-                                    error('Cette article est affecté à un autre utilisateur');
-                                if Warehouse_Activity_Line."STF Warehouse Put-Away Status" = Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity Completed" then
-                                    error('Article déja scanné');
                                 quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0;
                         end
@@ -433,34 +391,30 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
                     Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
-                    Warehouse_Activity_Line.setfilter("STF Assigned WMS User Name", '%1|%2', usname, '');
+
 
                     Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
                     if Warehouse_Activity_Line.findset() then
                         repeat
                             if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
-                                Warehouse_Activity_Line.Validate("CB Scanned Quantity", Warehouse_Activity_Line."Qty. Outstanding");
+                                Warehouse_Activity_Line.Validate("Qty. to Handle", Warehouse_Activity_Line."Qty. Outstanding");
                                 newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
                             end
                             else begin
-                                Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
+                                Warehouse_Activity_Line.Validate("Qty. to Handle", newQuantity);
                                 newQuantity := 0;
                             end;
                             QuantityInLine += Warehouse_Activity_Line."Qty. Outstanding";
-                            Warehouse_Activity_Line.Validate("STF Assigned WMS User Name", usname);
-
-                            Warehouse_Activity_Line.validate("STF Warehouse Put-Away Status", Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity in progress");
-
                             Warehouse_Activity_Line.Modify();
                             WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
-                            WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
+                            WarehouseActivityTakeLine.Validate("Qty. to Handle", Warehouse_Activity_Line."Qty. to Handle");
                             WarehouseActivityTakeLine.modify();
                         until Warehouse_Activity_Line.Next() = 0;
-                    // if QuantityInLine < quantity_dec then begin
-                    //     CurrPage.html.Viderqte();
-                    //     error('Quantité doit étre inférieur à la quantité demandée');
+                    if QuantityInLine < quantity_dec then begin
+                        CurrPage.html.Viderqte();
+                        error('Quantité doit étre inférieur à la quantité demandée');
 
-                    // end;
+                    end;
                     item.get(article_no_text);
                     scan.Reset();
                     scan.SetRange("Document Type", scan."Document Type"::reception);
@@ -706,24 +660,24 @@ page 76006 "CB Reception"
         out.APPEND('<label for="desc"><b>Description</b></label> <input id="desc" type="text" name="desc" readonly="readonly">');
 
         out.APPEND('<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 2%;">');
-        out.APPEND('<label for="qtescan" style="text-align: center;"><b>Qte Scan</b></label>');
-        out.APPEND('<label for="qtea" style="width: 32%; text-align: center;display:none"><b>Qte Total</b></label>');
-        out.APPEND('<label for="qtestock" style="width: 32%; text-align: center;display:none"><b>Qte Stock</b></label>');
+        out.APPEND('<label for="qtescan" style="width: 32%; text-align: center;"><b>Qte Scan</b></label>');
+        out.APPEND('<label for="qtea" style="width: 32%; text-align: center;"><b>Qte Total</b></label>');
+        out.APPEND('<label for="qtestock" style="width: 32%; text-align: center;"><b>Qte Stock</b></label>');
         out.APPEND('</div>');
 
         out.APPEND('<div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 2%; margin-top: 4px;">');
 
         out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtes" type="text" name="qtescan" '
-            + 'style="  font-size: 16px;" '
+            + 'style="width: 32%; text-align: center; font-size: 16px;" '
             + 'onkeydown="if(event.keyCode==27) this.select();" '
             + 'onkeypress="if(event.keyCode==13) next2();" required>');
 
         out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtea" type="text" name="qtea" '
-            + 'style="display:none;width: 32%; text-align: center; font-size: 16px; background-color: #f5f5f5; border: 1px solid #ccc;" '
+            + 'style="width: 32%; text-align: center; font-size: 16px; background-color: #f5f5f5; border: 1px solid #ccc;" '
             + 'readonly>');
 
         out.APPEND('<input tabindex="-1" enterkeyhint="done" id="qtestock" type="text" name="qtestock" '
-            + 'style="display:none;width: 32%; text-align: center; font-size: 16px; background-color: #f5f5f5; border: 1px solid #ccc;" '
+            + 'style="width: 32%; text-align: center; font-size: 16px; background-color: #f5f5f5; border: 1px solid #ccc;" '
             + 'readonly>');
 
         out.APPEND('</div>');

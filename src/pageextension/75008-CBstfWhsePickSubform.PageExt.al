@@ -16,6 +16,11 @@ pageextension 76002 "CB stf Whse. Pick Subform" extends "STF Whse. Pick Subform"
                 Caption = 'Picking validated';
                 ApplicationArea = all;
             }
+            field("CB Scanned Quantity"; Rec."CB Scanned Quantity")
+            {
+                Caption = 'Quantité scan';
+                ApplicationArea = all;
+            }
 
 
         }
