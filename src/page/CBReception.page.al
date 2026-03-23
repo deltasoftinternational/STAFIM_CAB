@@ -161,6 +161,12 @@ page 76006 "CB Reception"
 
 
                 begin
+                    if (validated) then
+                        error('Cette article est affecté à un autre utilisateur');
+
+                    if finished then
+                        error('Article déja scanné');
+
                     if cab_exists_flag = 0 then
                         error('veuillez scanner l''article');
                     cab.SelectToken('cabq', cabq_token);
@@ -207,6 +213,8 @@ page 76006 "CB Reception"
                     Item_Reference: Record "Item Reference";
                     item: record item;
                 begin
+                    validated := false;
+                    finished := false;
                     QuantityItem := 0;
                     cab_exists_flag := 0;
                     quantitya := 0;
@@ -292,10 +300,16 @@ page 76006 "CB Reception"
                             emplacement := Warehouse_Activity_Line."Bin Code";
                             CurrPage.html.rempliremp(emplacement);
                             repeat
-                                if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then
+                                if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then begin
+                                    validated := true;
                                     error('Cette article est affecté à un autre utilisateur');
-                                if Warehouse_Activity_Line."STF Warehouse Put-Away Status" = Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity Completed" then
+                                end;
+
+                                if Warehouse_Activity_Line."STF Warehouse Put-Away Status" = Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity Completed" then begin
+                                    finished := true;
                                     error('Article déja scanné');
+                                end;
+
                                 quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0;
                         end
@@ -436,26 +450,26 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.setfilter("STF Assigned WMS User Name", '%1|%2', usname, '');
 
                     Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
-                    if Warehouse_Activity_Line.findset() then
-                        repeat
-                            if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
-                                Warehouse_Activity_Line.Validate("CB Scanned Quantity", Warehouse_Activity_Line."Qty. Outstanding");
-                                newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
-                            end
-                            else begin
-                                Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
-                                newQuantity := 0;
-                            end;
-                            QuantityInLine += Warehouse_Activity_Line."Qty. Outstanding";
-                            Warehouse_Activity_Line.Validate("STF Assigned WMS User Name", usname);
+                    if Warehouse_Activity_Line.findfirst() then begin
+                        // if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
+                        Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
+                        //     newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
+                        // end
+                        // else begin
+                        //     Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
+                        //     newQuantity := 0;
+                        // end;
+                        QuantityInLine += Warehouse_Activity_Line."Qty. Outstanding";
+                        Warehouse_Activity_Line.Validate("STF Assigned WMS User Name", usname);
 
-                            Warehouse_Activity_Line.validate("STF Warehouse Put-Away Status", Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity in progress");
+                        Warehouse_Activity_Line.validate("STF Warehouse Put-Away Status", Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity in progress");
 
-                            Warehouse_Activity_Line.Modify();
-                            WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
-                            WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
-                            WarehouseActivityTakeLine.modify();
-                        until Warehouse_Activity_Line.Next() = 0;
+                        Warehouse_Activity_Line.Modify();
+                        WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
+                        WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
+                        WarehouseActivityTakeLine.modify();
+                    end;
+
                     // if QuantityInLine < quantity_dec then begin
                     //     CurrPage.html.Viderqte();
                     //     error('Quantité doit étre inférieur à la quantité demandée');
@@ -752,6 +766,7 @@ page 76006 "CB Reception"
         box_flag_value: Text;
         cab_value: Text;
         typesaveall: text;
+        validated, finished : boolean;
         typesavepick: text;
 
         old_quantity, QuantityItem, quantitya : decimal;
