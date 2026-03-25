@@ -33,7 +33,7 @@ tableextension 76003 "CB Reg Whse. Activity line" extends "Registered Whse. Acti
         field(76004; "CB Scanned Quantity"; decimal)
         {
             Caption = 'Quantité scan';
-
+            DecimalPlaces = 0 : 5;
             Editable = false;
 
         }

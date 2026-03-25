@@ -11,6 +11,7 @@ pageextension 76010 "CB Whse. Put-away Subform" extends "Whse. Put-away Subform"
             {
                 Caption = 'Quantité scan';
                 ApplicationArea = all;
+                DecimalPlaces = 0 : 5;
             }
 
 

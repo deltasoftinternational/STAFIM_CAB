@@ -435,15 +435,17 @@ async function remplirqte() {
 
 
 
-function rempliremp(value) {
+function rempliremp(value, description, qty) {
 
     var emp = document.getElementById('emp');
+    var desc = document.getElementById('desc');
+    var quantaf = document.getElementById('qtea');
 
 
+    desc.value = description;
     emp.value = value;
+    quantaf.value = qty;
 
-    // const cabv = { "cab": cab.value, "b": b, 'articleNo': article.value, "Lot": Lot.value, "daeEx": daeEx.value, "qtea": qtea.value, "qtes": qtes.value, "increment": increment, "emplacement": emp.value }
-    // Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckCAB', [cabv]);
 
 }
 
@@ -505,6 +507,7 @@ function WhenLoaded() {
     cab.addEventListener('keypress', function(e) {
 
         if ((e.keyCode == 13)) {
+
             let value = cab.value;
             if (value.length > 0 && (value[0] === 'P' || value[0] === 'Q')) {
                 value = value.substring(1);

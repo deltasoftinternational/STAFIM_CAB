@@ -47,6 +47,20 @@ page 76003 "CB Role Center"
                 }
 
             }
+            group(Item)
+            {
+                Caption = 'Article';
+                Image = Bin;
+
+                action(Connect9)
+                {
+                    Caption = 'Vérifier emplacement';
+                    RunObject = Page "CB Bin";
+                    ApplicationArea = All;
+                    Image = Calculator;
+                }
+
+            }
             /*group(Inventaire)
             {
                 Caption = 'Inventaire';
