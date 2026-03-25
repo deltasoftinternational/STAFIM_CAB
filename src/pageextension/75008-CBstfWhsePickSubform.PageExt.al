@@ -18,6 +18,7 @@ pageextension 76002 "CB stf Whse. Pick Subform" extends "STF Whse. Pick Subform"
             }
             field("CB Scanned Quantity"; Rec."CB Scanned Quantity")
             {
+                DecimalPlaces = 0 : 5;
                 Caption = 'Quantité scan';
                 ApplicationArea = all;
             }

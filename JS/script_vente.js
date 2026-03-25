@@ -505,6 +505,10 @@ function WhenLoaded() {
     cab.addEventListener('keypress', function(e) {
 
         if ((e.keyCode == 13)) {
+            article.value = "";
+            desc.value = "";
+            qtes.value = "";
+            qtea.value = "";
             let value = cab.value;
             if (value.length > 0 && (value[0] === 'P' || value[0] === 'Q')) {
                 value = value.substring(1);

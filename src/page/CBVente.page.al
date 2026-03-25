@@ -602,7 +602,7 @@ page 76000 "CB Vente"
                             if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
                                 if role = 'COL' then begin
                                     Warehouse_Activity_Line.Validate("STF Controlled Quantity", Warehouse_Activity_Line."Qty. Outstanding");
-                                    Warehouse_Activity_Line.SetRange("cb Picked barcode", picked_barcode);
+                                    //Warehouse_Activity_Line.SetRange("cb Picked barcode", picked_barcode);
                                 end
                                 else
                                     Warehouse_Activity_Line.Validate("STF Picked Quantity", Warehouse_Activity_Line."Qty. Outstanding");
@@ -611,7 +611,7 @@ page 76000 "CB Vente"
                             else begin
                                 if role = 'COL' then begin
                                     Warehouse_Activity_Line.Validate("STF Controlled Quantity", newQuantity);
-                                    Warehouse_Activity_Line.SetRange("cb Picked barcode", picked_barcode);
+                                    //Warehouse_Activity_Line.SetRange("cb Picked barcode", picked_barcode);
                                 end
                                 else
                                     Warehouse_Activity_Line.Validate("STF Picked Quantity", newQuantity);
@@ -1026,7 +1026,6 @@ page 76000 "CB Vente"
         else begin
             Colis.Init();
             Colis.Validate("Line No", lineno);
-
             Colis.Validate("Colis No", colisno);
             Colis.Validate("Picking No", warehouseline."No.");
             Colis.Validate("Picking Line No", warehouseline."Line No.");

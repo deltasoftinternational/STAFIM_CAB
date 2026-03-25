@@ -298,7 +298,8 @@ page 76006 "CB Reception"
                         Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
                         if Warehouse_Activity_Line.findset() then begin
                             emplacement := Warehouse_Activity_Line."Bin Code";
-                            CurrPage.html.rempliremp(emplacement);
+
+                            CurrPage.html.rempliremp(emplacement, Warehouse_Activity_Line.Description);
                             repeat
                                 if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then begin
                                     validated := true;
@@ -326,13 +327,17 @@ page 76006 "CB Reception"
 
                 trigger finish2(item: JsonObject)
                 var
-                    ligne_reception: Record "CB Historique Scan";
+                    Warehouse_Activity_Line: record "Warehouse Activity Line";
                 begin
-                    ligne_reception.Reset();
-                    ligne_reception.SetRange("Document No.", cmdSave);
-                    ligne_reception.SetRange(user, usname);
-                    if ligne_reception.FindSet() then
-                        Page.run(76001, ligne_reception);
+                    Warehouse_Activity_Line.reset;
+                    Warehouse_Activity_Line.SetCurrentKey("Bin Code");
+                    Warehouse_Activity_Line.SetAscending("Bin Code", true);
+                    Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
+                    Warehouse_Activity_Line.SetRange("activity type", Warehouse_Activity_Line."activity type"::"Put-away");
+                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::Place);
+                    Warehouse_Activity_Line.SetFilter("user Filter", usname);
+                    if Warehouse_Activity_Line.findset then
+                        Page.run(76012, Warehouse_Activity_Line);
                 end;
 
 
@@ -690,7 +695,8 @@ page 76006 "CB Reception"
             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
             Warehouse_Activity_Line.SetRange("No.", cmdsave);
             if Warehouse_Activity_Line.findset() then
-                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code")
+                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code", Warehouse_Activity_Line.Description)
+
             else
                 Message('il n''ya pas d''article non validé affecté à cet utilisateur');
         end;
