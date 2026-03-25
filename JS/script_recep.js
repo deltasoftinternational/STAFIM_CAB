@@ -416,16 +416,17 @@ async function remplirqte() {
 
 
 
-function rempliremp(value, description) {
-
+function rempliremp(value, description, article, qte) {
     var emp = document.getElementById('emp');
     var desc = document.getElementById('desc');
 
+    var articleNo = document.getElementById('articleNo');
+    var quanta = document.getElementById('qtes');
+    quanta.value = qte;
     desc.value = description;
     emp.value = value;
+    articleNo.value = article;
 
-    // const cabv = { "cab": cab.value, "b": b, 'articleNo': article.value, "Lot": Lot.value, "daeEx": daeEx.value, "qtea": qtea.value, "qtes": qtes.value, "increment": increment, "emplacement": emp.value }
-    // Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('CheckCAB', [cabv]);
 
 }
 

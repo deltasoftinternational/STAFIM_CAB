@@ -218,6 +218,7 @@ page 76006 "CB Reception"
                     QuantityItem := 0;
                     cab_exists_flag := 0;
                     quantitya := 0;
+                    quantitytot := 0;
 
                     cab.SelectToken('cab', cab_token);
                     cab_token.WriteTo(cab_value);
@@ -299,8 +300,8 @@ page 76006 "CB Reception"
                         if Warehouse_Activity_Line.findset() then begin
                             emplacement := Warehouse_Activity_Line."Bin Code";
 
-                            CurrPage.html.rempliremp(emplacement, Warehouse_Activity_Line.Description);
                             repeat
+                                quantitytot += Warehouse_Activity_Line."CB Scanned Quantity";
                                 if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then begin
                                     validated := true;
                                     error('Cette article est affecté à un autre utilisateur');
@@ -313,9 +314,14 @@ page 76006 "CB Reception"
 
                                 quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0;
+                            CurrPage.html.rempliremp(emplacement, Warehouse_Activity_Line.Description, Warehouse_Activity_Line."item No.", quantitytot);
+
                         end
-                        else
+
+                        else begin
+                            CurrPage.html.reset();
                             Error('Article non existant');
+                        end;
                         CurrPage.html.remplirqte(cab_value);
 
 
@@ -695,7 +701,7 @@ page 76006 "CB Reception"
             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
             Warehouse_Activity_Line.SetRange("No.", cmdsave);
             if Warehouse_Activity_Line.findset() then
-                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code", Warehouse_Activity_Line.Description)
+                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code", Warehouse_Activity_Line.Description, Warehouse_Activity_Line."item No.", quantitytot)
 
             else
                 Message('il n''ya pas d''article non validé affecté à cet utilisateur');
@@ -778,6 +784,7 @@ page 76006 "CB Reception"
         old_quantity, QuantityItem, quantitya : decimal;
         emplacement, Picked_barcode : text;
         cab_exists_flag: Integer;
+        quantitytot: decimal;
 
 
 

@@ -452,8 +452,10 @@ page 76000 "CB Vente"
                             repeat
                                 quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0
-                        else
+                        else begin
+                            CurrPage.html.reset();
                             Error('Article non existant');
+                        end;
                         CurrPage.html.remplirqte(cab_value);
 
 
@@ -1054,7 +1056,7 @@ page 76000 "CB Vente"
             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
             Warehouse_Activity_Line.SetRange("No.", cmdsave);
             if Warehouse_Activity_Line.findset() then
-                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code")
+                CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code", Warehouse_Activity_Line.Description, quantitya)
             else
                 Message('il n''ya pas d''article non validé affecté à cet utilisateur');
         end;

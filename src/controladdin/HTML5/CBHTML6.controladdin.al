@@ -29,7 +29,7 @@ controladdin "CB HTML6"
     procedure WhenLoaded();
     procedure remplirqtestock(stock: text);
 
-    procedure rempliremp(value: text; description: text);
+    procedure rempliremp(value: text; description: text; article: text; qte: decimal);
     procedure remplirqte(value: text);
 
     procedure cabnonvalide();
