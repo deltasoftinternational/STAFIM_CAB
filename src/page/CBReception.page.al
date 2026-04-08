@@ -409,7 +409,7 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line, WarehouseActivityTakeLine : Record "Warehouse Activity Line";
                     scan: record "CB historique scan";
                     item: record item;
-
+                    line: decimal;
 
 
                 begin
@@ -461,24 +461,42 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.setfilter("STF Assigned WMS User Name", '%1|%2', usname, '');
 
                     Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
-                    if Warehouse_Activity_Line.findfirst() then begin
-                        // if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
-                        Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
-                        //     newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
-                        // end
-                        // else begin
-                        //     Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
-                        //     newQuantity := 0;
-                        // end;
-                        QuantityInLine += Warehouse_Activity_Line."Qty. Outstanding";
+                    if Warehouse_Activity_Line.findset() then
+                        repeat
+                            if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
+                                Warehouse_Activity_Line.Validate("CB Scanned Quantity", Warehouse_Activity_Line."Qty. Outstanding");
+                                newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
+                            end
+                            else begin
+                                Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity);
+                                newQuantity := 0;
+                            end;
+                            QuantityInLine += Warehouse_Activity_Line."Qty. Outstanding";
+                            Warehouse_Activity_Line.Validate("STF Assigned WMS User Name", usname);
+
+                            Warehouse_Activity_Line.validate("STF Warehouse Put-Away Status", Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity in progress");
+
+                            Warehouse_Activity_Line.Modify();
+                            line := Warehouse_Activity_Line."Line No.";
+                            WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
+                            WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
+                            WarehouseActivityTakeLine.modify();
+
+                        until Warehouse_Activity_Line.Next() = 0;
+                    if newQuantity > 0 then begin
+                        Warehouse_Activity_Line.get(Warehouse_Activity_Line."Activity Type"::"Put-away", cmdsave, line);
+                        Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity + Warehouse_Activity_Line."CB Scanned Quantity");
+                        QuantityInLine += newQuantity;
                         Warehouse_Activity_Line.Validate("STF Assigned WMS User Name", usname);
 
                         Warehouse_Activity_Line.validate("STF Warehouse Put-Away Status", Warehouse_Activity_Line."STF Warehouse Put-Away Status"::"Activity in progress");
 
                         Warehouse_Activity_Line.Modify();
+                        line := Warehouse_Activity_Line."Line No.";
                         WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
                         WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
                         WarehouseActivityTakeLine.modify();
+
                     end;
 
                     // if QuantityInLine < quantity_dec then begin
