@@ -333,17 +333,30 @@ page 76006 "CB Reception"
 
                 trigger finish2(item: JsonObject)
                 var
-                    Warehouse_Activity_Line: record "Warehouse Activity Line";
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
+                    ProcessedItems: List of [Code[20]]; // Used to track unique Item Numbers
                 begin
-                    Warehouse_Activity_Line.reset;
+                    Warehouse_Activity_Line.Reset();
                     Warehouse_Activity_Line.SetCurrentKey("Bin Code");
                     Warehouse_Activity_Line.SetAscending("Bin Code", true);
                     Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
-                    Warehouse_Activity_Line.SetRange("activity type", Warehouse_Activity_Line."activity type"::"Put-away");
+                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::Place);
-                    Warehouse_Activity_Line.SetFilter("user Filter", usname);
-                    if Warehouse_Activity_Line.findset then
-                        Page.run(76012, Warehouse_Activity_Line);
+                    Warehouse_Activity_Line.SetFilter("User Filter", usname);
+
+                    if Warehouse_Activity_Line.FindSet() then begin
+                        repeat
+                            if not ProcessedItems.Contains(Warehouse_Activity_Line."Item No.") then begin
+                                ProcessedItems.Add(Warehouse_Activity_Line."Item No.");
+
+                                Warehouse_Activity_Line.Mark(true);
+                            end;
+                        until Warehouse_Activity_Line.Next() = 0;
+
+                        Warehouse_Activity_Line.MarkedOnly(true);
+
+                        Page.Run(76012, Warehouse_Activity_Line);
+                    end;
                 end;
 
 
@@ -371,7 +384,7 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
                     if Warehouse_Activity_Line.FindSet() then
                         repeat
-                            if Warehouse_Activity_Line."Qty. Outstanding" <> Warehouse_Activity_Line."STF Picked Quantity" then begin
+                            if Warehouse_Activity_Line."Quantity" <> Warehouse_Activity_Line."STF Picked Quantity" then begin
                                 ModalResult := Page.RunModal(76004, Warehouse_Activity_Line);
                                 if ModalResult <> ACTION::LookupOK then
                                     error('vous devez choisir un code motif');
@@ -532,6 +545,7 @@ page 76006 "CB Reception"
                         scan.Validate("User", usname);
                         scan.Validate("Description", Item.Description);
                         scan.Validate("Controlled Quantity", quantity_dec - old_quantity);
+                        scan.Validate("Colis", Picked_barcode);
                         scan.Insert(true);
 
                     end;

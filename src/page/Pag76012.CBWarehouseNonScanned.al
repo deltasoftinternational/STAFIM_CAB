@@ -15,26 +15,34 @@ page 76012 "CB Warehouse Non Scanned"
         {
             repeater(GroupName)
             {
-                field("Article"; rec."Item No.")
+                field("Article"; Rec."Item No.")
                 {
+                    ApplicationArea = All;
                     Editable = false;
                 }
-                field("Description"; rec."Description")
+                field("Description"; Rec."Description")
                 {
+                    ApplicationArea = All;
                     Editable = false;
                 }
-                field("Quantity"; rec."CB purchase UserQuantity")
+                // Bind the field to your global variable instead of the table field
+                field("Quantity"; quantity)
                 {
-                    caption = 'Quantité';
+                    Caption = 'Quantité';
+                    ApplicationArea = All;
                     Editable = false;
                     DecimalPlaces = 0 : 5;
                 }
             }
-
         }
     }
 
     var
-        quantity: decimal;
+        quantity: Decimal;
 
+    trigger OnAfterGetRecord()
+    begin
+        Rec.CalcFields("CB purchase UserQuantity");
+        quantity := Rec."CB purchase UserQuantity" + Rec."CB validated Quantity";
+    end;
 }

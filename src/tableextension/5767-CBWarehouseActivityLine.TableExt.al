@@ -42,9 +42,10 @@ tableextension 76001 "CB Warehouse Activity Line" extends "Warehouse Activity Li
         {
             CalcFormula = sum("CB Historique Scan"."Controlled Quantity" where(
                   "user" = field("user Filter"),
-                  "Document No." = field("No."),
+                  Colis = field("STF Colis"),
                   Emplacement = field("Bin Code"),
-                  "Document Type" = const(Reception)
+                  "Document Type" = const(Reception),
+                  article = field("Item No.")
               ));
             Editable = false;
             FieldClass = FlowField;
@@ -53,6 +54,13 @@ tableextension 76001 "CB Warehouse Activity Line" extends "Warehouse Activity Li
         {
             FieldClass = FlowFilter;
         }
+        field(65; "CB validated Quantity"; decimal)
+        {
+            caption = 'Quantité validée lors du dernier scan';
+
+        }
+
+
     }
 }
 
