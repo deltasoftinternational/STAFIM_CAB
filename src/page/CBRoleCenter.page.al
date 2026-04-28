@@ -47,6 +47,20 @@ page 76003 "CB Role Center"
                 }
 
             }
+            group(Colis)
+            {
+                Caption = 'Pointage colis';
+                Image = Calculator;
+
+                action(Connect11)
+                {
+                    Caption = 'Pointage colis';
+                    RunObject = Page "CB scan colis";
+                    ApplicationArea = All;
+                    Image = Calculator;
+                }
+
+            }
             group(Item)
             {
                 Caption = 'Article';

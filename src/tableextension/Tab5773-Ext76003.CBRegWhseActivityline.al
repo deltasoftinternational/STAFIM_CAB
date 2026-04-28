@@ -37,6 +37,8 @@ tableextension 76003 "CB Reg Whse. Activity line" extends "Registered Whse. Acti
             Editable = false;
 
         }
+
+
     }
 }
 

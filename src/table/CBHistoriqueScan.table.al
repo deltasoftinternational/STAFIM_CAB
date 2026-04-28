@@ -56,6 +56,12 @@ table 76000 "CB Historique Scan"
         {
             caption = 'Emplacement déstinataire';
         }
+        field(76015; Colis; Code[250])
+        {
+        }
+        field(76016; Validated_quantity; decimal)
+        {
+        }
     }
     keys
     {

@@ -3,6 +3,16 @@ codeunit 76000 "CB Vérification"
 
 
 
+
+    // [EventSubscriber(ObjectType::Table, Database::"Sales header", OnBeforeSendToPosting, '', false, false)]
+
+    //     local procedure OnBeforeSendToPosting(var SalesHeader: Record "Sales Header"; var IsSuccess: Boolean; var IsHandled: Boolean; PostingCodeunitID: Integer)
+    //     begin
+    //         if (SalesHeader."Document Type" = SalesHeader."Document Type"::"Return Order") and (SalesHeader."ZEN ECommerce" <> '') and (SalesHeader."Zen source" = SalesHeader."Zen source"::"B2C") then begin
+    //             SalesHeader.Validate("ZEN Status B2C", SalesHeader."ZEN Status B2C"::"Retour validé");
+    //             SalesHeader.Modify();
+    //         end;
+    //     end;
     procedure EncodeEAN13(pcodBarcode: Code[250]; pintSize: Integer; pblnVertical: Boolean; var precTmpTempBlob: Record Item)
     var
         lintCheckDigit: Integer;
