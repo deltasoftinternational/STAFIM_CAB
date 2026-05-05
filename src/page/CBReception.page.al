@@ -212,6 +212,7 @@ page 76006 "CB Reception"
                     Colis_token: JsonToken;
                     Item_Reference: Record "Item Reference";
                     item: record item;
+                    scan: record "CB historique scan";
                 begin
                     validated := false;
                     finished := false;
@@ -301,7 +302,7 @@ page 76006 "CB Reception"
                             emplacement := Warehouse_Activity_Line."Bin Code";
 
                             repeat
-                                quantitytot += Warehouse_Activity_Line."CB Scanned Quantity";
+                                //quantitytot += Warehouse_Activity_Line."CB Scanned Quantity";
                                 if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then begin
                                     validated := true;
                                     error('Cette article est affecté à un autre utilisateur');
@@ -314,6 +315,14 @@ page 76006 "CB Reception"
 
                                 quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0;
+                            scan.Reset();
+                            scan.SetRange("Document Type", scan."Document Type"::reception);
+                            scan.SetRange("colis", picked_barcode);
+                            scan.setrange(article, item_no_text);
+                            scan.setrange(Magasin, magsave);
+                            scan.setrange(Cancelled, false);
+                            scan.CalcSums("Controlled Quantity");
+                            quantitytot := scan."Controlled Quantity";
                             CurrPage.html.rempliremp(emplacement, Warehouse_Activity_Line.Description, Warehouse_Activity_Line."item No.", quantitytot);
 
                         end
@@ -420,13 +429,17 @@ page 76006 "CB Reception"
                     token_quantity_affiche: JsonToken;
                     token_empl: JsonToken;
                     QuantityInLine: decimal;
+                    validatedquantity: decimal;
                     Warehouse_Activity_Line, WarehouseActivityTakeLine : Record "Warehouse Activity Line";
                     scan: record "CB historique scan";
                     item: record item;
                     line: decimal;
+                    Registered_Whse_Activity_Line: record "Registered Whse. Activity Line";
 
 
                 begin
+
+
                     item_json.SelectToken('art', token_article);
                     token_article.WriteTo(article_no_text);
                     article_no_text := article_no_text.Replace('"', '');
@@ -466,6 +479,19 @@ page 76006 "CB Reception"
                     Evaluate(quantity_dec, quantity_text);
                     QuantityInLine := 0;
                     newQuantity := quantity_dec;
+                    Registered_Whse_Activity_Line.Reset();
+                    Registered_Whse_Activity_Line.SetRange("Item No.", article_no_text);
+                    Registered_Whse_Activity_Line.SetRange("Activity Type", Registered_Whse_Activity_Line."Activity Type"::"Put-away");
+                    Registered_Whse_Activity_Line.SetRange("Action Type", Registered_Whse_Activity_Line."Action Type"::place);
+                    Registered_Whse_Activity_Line.SetRange("STF Colis", picked_barcode);
+                    Registered_Whse_Activity_Line.CalcSums("CB Scanned Quantity");
+                    validatedquantity := Registered_Whse_Activity_Line."CB Scanned Quantity";
+                    newQuantity := newQuantity - validatedquantity;
+                    if newQuantity < 0 then begin
+                        CurrPage.html.Viderqte();
+                        error('%1 articles déja validés dans ce colis', validatedquantity);
+                    end;
+
                     Warehouse_Activity_Line.Reset();
                     //Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Item No.", article_no_text);
