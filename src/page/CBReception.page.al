@@ -74,7 +74,7 @@ page 76006 "CB Reception"
 
                 begin
                     Warehouse_Activity_Line.Reset();
-                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    //Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
                     Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
                     Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
@@ -176,7 +176,7 @@ page 76006 "CB Reception"
 
                     scan.Reset();
                     scan.SetRange("Document Type", scan."Document Type"::reception);
-                    scan.SetRange("Document No.", cmdSave);
+                    scan.SetRange("colis", picked_barcode);
                     scan.setrange(article, item_no_text);
                     scan.setrange(Magasin, magsave);
                     scan.setrange(Emplacement, emplacement);
@@ -291,7 +291,7 @@ page 76006 "CB Reception"
                     if cab_exists_flag = 1 then begin
 
                         Warehouse_Activity_Line.Reset();
-                        Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                        //Warehouse_Activity_Line.SetRange("No.", cmdsave);
                         Warehouse_Activity_Line.SetRange("Item No.", item_no_text);
                         Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
 
@@ -376,7 +376,8 @@ page 76006 "CB Reception"
                     token_empl.WriteTo(emplacement);
                     emplacement := emplacement.Replace('"', '');
                     Warehouse_Activity_Line.Reset();
-                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    //Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
                     Warehouse_Activity_Line.SetRange("CB Picking validated", false);
                     Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
@@ -384,7 +385,7 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
                     if Warehouse_Activity_Line.FindSet() then
                         repeat
-                            if Warehouse_Activity_Line."Quantity" <> Warehouse_Activity_Line."STF Picked Quantity" then begin
+                            if Warehouse_Activity_Line."Qty. Outstanding" <> Warehouse_Activity_Line."STF Picked Quantity" then begin
                                 ModalResult := Page.RunModal(76004, Warehouse_Activity_Line);
                                 if ModalResult <> ACTION::LookupOK then
                                     error('vous devez choisir un code motif');
@@ -466,7 +467,7 @@ page 76006 "CB Reception"
                     QuantityInLine := 0;
                     newQuantity := quantity_dec;
                     Warehouse_Activity_Line.Reset();
-                    Warehouse_Activity_Line.SetRange("No.", cmdsave);
+                    //Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Item No.", article_no_text);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::place);
@@ -497,7 +498,12 @@ page 76006 "CB Reception"
 
                         until Warehouse_Activity_Line.Next() = 0;
                     if newQuantity > 0 then begin
-                        Warehouse_Activity_Line.get(Warehouse_Activity_Line."Activity Type"::"Put-away", cmdsave, line);
+                        Warehouse_Activity_Line.Reset();
+                        Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
+                        Warehouse_Activity_Line.SetRange("Line No.", line);
+                        Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
+                        if Warehouse_Activity_Line.FindLast() then;
+                        //Warehouse_Activity_Line.get(Warehouse_Activity_Line."Activity Type"::"Put-away", cmdsave, line);
                         Warehouse_Activity_Line.Validate("CB Scanned Quantity", newQuantity + Warehouse_Activity_Line."CB Scanned Quantity");
                         QuantityInLine += newQuantity;
                         Warehouse_Activity_Line.Validate("STF Assigned WMS User Name", usname);
@@ -520,7 +526,8 @@ page 76006 "CB Reception"
                     item.get(article_no_text);
                     scan.Reset();
                     scan.SetRange("Document Type", scan."Document Type"::reception);
-                    scan.SetRange("Document No.", cmdSave);
+                    //scan.SetRange("Document No.", cmdSave);
+                    scan.setrange(colis, picked_barcode);
                     scan.setrange(article, article_no_text);
                     scan.setrange(Magasin, magsave);
                     scan.setrange(Emplacement, emplacement);
@@ -731,7 +738,8 @@ page 76006 "CB Reception"
             Warehouse_Activity_Line.setrange("CB Picking validated", false);
             Warehouse_Activity_Line.SetRange("STF Assigned WMS User Name", usname);
             Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::take);
-            Warehouse_Activity_Line.SetRange("No.", cmdsave);
+            // Warehouse_Activity_Line.SetRange("No.", cmdsave);
+            Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
             if Warehouse_Activity_Line.findset() then
                 CurrPage.html.rempliremp(Warehouse_Activity_Line."Bin code", Warehouse_Activity_Line.Description, Warehouse_Activity_Line."item No.", quantitytot)
 
