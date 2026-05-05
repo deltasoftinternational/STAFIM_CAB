@@ -212,6 +212,7 @@ page 76006 "CB Reception"
                     Colis_token: JsonToken;
                     Item_Reference: Record "Item Reference";
                     item: record item;
+                    scan: record "CB historique scan";
                 begin
                     validated := false;
                     finished := false;
@@ -301,7 +302,7 @@ page 76006 "CB Reception"
                             emplacement := Warehouse_Activity_Line."Bin Code";
 
                             repeat
-                                quantitytot += Warehouse_Activity_Line."CB Scanned Quantity";
+                                //quantitytot += Warehouse_Activity_Line."CB Scanned Quantity";
                                 if ((Warehouse_Activity_Line."STF Assigned WMS User Name" <> usname) and (Warehouse_Activity_Line."STF Assigned WMS User Name" <> '')) then begin
                                     validated := true;
                                     error('Cette article est affecté à un autre utilisateur');
@@ -314,6 +315,14 @@ page 76006 "CB Reception"
 
                                 quantitya += Warehouse_Activity_Line."Qty. Outstanding";
                             until Warehouse_Activity_Line.Next() = 0;
+                            scan.Reset();
+                            scan.SetRange("Document Type", scan."Document Type"::reception);
+                            scan.SetRange("colis", picked_barcode);
+                            scan.setrange(article, item_no_text);
+                            scan.setrange(Magasin, magsave);
+                            scan.setrange(Cancelled, false);
+                            scan.CalcSums("Controlled Quantity");
+                            quantitytot := scan."Controlled Quantity";
                             CurrPage.html.rempliremp(emplacement, Warehouse_Activity_Line.Description, Warehouse_Activity_Line."item No.", quantitytot);
 
                         end
@@ -420,13 +429,17 @@ page 76006 "CB Reception"
                     token_quantity_affiche: JsonToken;
                     token_empl: JsonToken;
                     QuantityInLine: decimal;
+                    validatedquantity: decimal;
                     Warehouse_Activity_Line, WarehouseActivityTakeLine : Record "Warehouse Activity Line";
                     scan: record "CB historique scan";
                     item: record item;
                     line: decimal;
+                    Registered_Whse_Activity_Line: record "Registered Whse. Activity Line";
 
 
                 begin
+
+
                     item_json.SelectToken('art', token_article);
                     token_article.WriteTo(article_no_text);
                     article_no_text := article_no_text.Replace('"', '');
@@ -466,6 +479,19 @@ page 76006 "CB Reception"
                     Evaluate(quantity_dec, quantity_text);
                     QuantityInLine := 0;
                     newQuantity := quantity_dec;
+                    Registered_Whse_Activity_Line.Reset();
+                    Registered_Whse_Activity_Line.SetRange("Item No.", article_no_text);
+                    Registered_Whse_Activity_Line.SetRange("Activity Type", Registered_Whse_Activity_Line."Activity Type"::"Put-away");
+                    Registered_Whse_Activity_Line.SetRange("Action Type", Registered_Whse_Activity_Line."Action Type"::place);
+                    Registered_Whse_Activity_Line.SetRange("STF Colis", picked_barcode);
+                    Registered_Whse_Activity_Line.CalcSums("CB Scanned Quantity");
+                    validatedquantity := Registered_Whse_Activity_Line."CB Scanned Quantity";
+                    newQuantity := newQuantity - validatedquantity;
+                    if newQuantity < 0 then begin
+                        CurrPage.html.Viderqte();
+                        error('%1 articles déja validés dans ce colis', validatedquantity);
+                    end;
+
                     Warehouse_Activity_Line.Reset();
                     //Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Item No.", article_no_text);
@@ -753,8 +779,8 @@ page 76006 "CB Reception"
         out: TextBuilder;
     begin
         out.APPEND('<!DOCTYPE html> <html> <head> <meta name="viewport" content="width=device-width, initial-scale=1"> <style> .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; } .modal-content { background-color: #fff; padding: 20px; border-radius: 5px; text-align: center; } .modal-btn { margin: 10px; padding: 10px 20px; cursor: pointer; } body { font-family: Arial, Helvetica, sans-serif; background-color: #f9f9f9; margin: 0; padding: 0; } .container { max-width: 800px; margin: 0 auto; padding: 20px; background-color: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); } h1 { text-align: center; margin-bottom: 30px; color: #333; } label { display: block; margin-bottom: 8px; color: #333; } input[type="text"], select { width: 100%; padding: 12px 20px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; } .qte-container { display: grid; } button { background-color: #04AA6D; color: white; padding: 14px 20px; margin: 10px 0; border: none; border-radius: 4px; cursor: pointer; width: 40%; font-size: 16px; transition: background-color 0.3s; } button:hover { background-color: #048f5d; } #resetBtn { background-color: cadetblue; float: left; margin-right: 20px; } #nextBtn { float: right; } #finishBtn { float: left; } .imgcontainer { text-align: center; margin: 24px 0 12px 0; } img.avatar { width: 40%; border-radius: 50%; } /* Change styles for span and cancel button on extra small screens */ @media screen and (max-width: 300px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } } .loader { border: 16px solid #f3f3f3; border-radius: 50%; border-top: 16px solid blue; border-bottom: 16px solid blue; width: 120px; height: 120px; -webkit-animation: spin 2s linear infinite; animation: spin 2s linear infinite; position: absolute; z-index: 10; top: 20%; left: 40%; text-align: center; font-size: 10px; } @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style> </head> ');
-        out.APPEND('<body><center> <h2 style="color : red;">reception: ' + cmdv + '</h2> </center>');
-        out.APPEND('<center> <h3 style="color : red;"> Magasin: ' + magsave + '</h3> </center>');
+        out.APPEND('<body><center> <h2 style="color : red;">Colis: ' + picked_barcode + '</h2> </center>');
+        out.APPEND('<center> <h3 style="color : red;"> Magasin: ' + magsave + '</h3> <h3 style="color : red;"> Utilisateur: ' + usname + '</h3> </center>');
         out.APPEND('<div style="text-align:center;display:none;"><label for="increment"><b style="color : red;">Voulez-vous incrémenter?</b></label>');
         out.APPEND('<input type="checkbox" id="increment" name="increment" value="true" checked></div>');
 
