@@ -31,27 +31,44 @@ report 76002 "CB Receipt Scan Gap"
                 column(ItemDescription; Description) { }
                 column(Quantity; Quantity) { }
                 column(CB_Scanned_Quantity; "CB Scanned Quantity") { }
-                dataitem("CB Historique Scan"; "CB Historique Scan")
-                {
-                    DataItemLink = Magasin = field("Location Code"), Article = field("Item No.");
-                    DataItemTableView = sorting("Document No.") where("Document Type" = Const(Reception));
+                // dataitem("CB Historique Scan"; "CB Historique Scan")
+                // {
+                //     DataItemLink = Magasin = field("Location Code"), Article = field("Item No.");
+                //     DataItemTableView = sorting("Document No.") where("Document Type" = Const(Reception));
 
-                    column(article; article) { }
-                    column(Description; Description) { }
-                    column(Controlled_Quantity; "Controlled Quantity") { }
-                    column(Emplacement; Emplacement) { }
-                    column(user; user) { }
+                //     column(article; article) { }
+                //     column(Description; Description) { }
+                //     column(Controlled_Quantity; "Controlled Quantity") { }
+                //     column(Emplacement; Emplacement) { }
+                //     column(user; user) { }
 
-                    trigger OnPreDataItem()
-                    begin
-                        if not ShowScanHistory then
-                            CurrReport.Break();
-                        "CB Historique Scan".SetRange("Document No.", "Registered Whse. Activity Hdr."."Whse. Activity No.");
-                    end;
-                }
+                //     trigger OnPreDataItem()
+                //     begin
+                //         if not ShowScanHistory then
+                //             CurrReport.Break();
+                //         "CB Historique Scan".SetRange("Document No.", "Registered Whse. Activity Hdr."."Whse. Activity No.");
+                //     end;
+                // }
             }
 
+            dataitem("CB Historique Scan"; "CB Historique Scan")
+            {
+                DataItemLink = Magasin = field("Location Code"), "Document No." = field("Whse. Activity No.");
+                DataItemTableView = sorting("Document No.") where("Document Type" = Const(Reception));
 
+                column(article; article) { }
+                column(Description; Description) { }
+                column(Controlled_Quantity; "Controlled Quantity") { }
+                column(Emplacement; Emplacement) { }
+                column(user; user) { }
+
+                trigger OnPreDataItem()
+                begin
+                    if not ShowScanHistory then
+                        CurrReport.Break();
+                    // "CB Historique Scan".SetRange("Document No.", "Registered Whse. Activity Hdr."."Whse. Activity No.");
+                end;
+            }
 
         }
     }
