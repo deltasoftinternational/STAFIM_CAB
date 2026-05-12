@@ -1,4 +1,4 @@
-codeunit 76001 "CB Event subscribers"
+codeunit 76001 "CB Event Subscribers"
 {
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Whse.-Activity-Register", OnBeforeUpdateWarehouseActivityLineQtyToHandle, '', false, false)]
     local procedure "Whse.-Activity-Register_OnBeforeUpdateWarehouseActivityLineQtyToHandle"(var WarehouseActivityLine: Record "Warehouse Activity Line"; var QtyDiff: Decimal; var QtyBaseDiff: Decimal; HideDialog: Boolean; var IsHandled: Boolean)
