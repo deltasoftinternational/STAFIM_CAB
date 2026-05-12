@@ -351,7 +351,7 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
                     Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::Place);
-                    Warehouse_Activity_Line.SetFilter("User Filter", usname);
+                    Warehouse_Activity_Line.SetFilter("CB User Filter", usname);
 
                     if Warehouse_Activity_Line.FindSet() then begin
                         repeat
