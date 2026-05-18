@@ -15,6 +15,6 @@
     "CRS.DisableDefaultAlSnippets": true,
     "CRS.AlSubFolderName": "src",
     "al.defaultLaunchConfigurationName": "Docker",
-    "xliffSync.baseFile": "STAFIM.g.xlf",
-    "al.ruleSetPath": "./.vscode/stafim.ruleset.json"
+    "xliffSync.baseFile": "STAFIM_CAB.g.xlf",
+    "al.ruleSetPath": "./.vscode/stafim_CAB.ruleset.json"
 }
