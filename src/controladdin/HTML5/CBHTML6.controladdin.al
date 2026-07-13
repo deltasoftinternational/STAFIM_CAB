@@ -38,5 +38,9 @@ controladdin "CB HTML6"
     procedure Viderqte();
 
     procedure autoComplete(barcodeNo: code[20]; articleNo: code[20]; desc: Text; qtea: Decimal; bb: Text; quantitya: decimal);
+    procedure showCrossBins(quantitycross: Decimal);
+    procedure showCrossPopup(crossData: Text);
+
+    event viewCrossBins(info: JsonObject);
 
 }

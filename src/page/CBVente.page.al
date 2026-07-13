@@ -1006,9 +1006,7 @@ page 76000 "CB Vente"
         finalquantity: decimal;
         warehouseline2: record "Warehouse Activity Line";
     begin
-        finalquantity := 0;
-        if warehouseline2.get(warehouseline2."Action Type"::Take, warehouseline."No.", warehouseline."STF Source Line No") then
-            finalquantity := warehouseline2."STF Picked Quantity";
+
         if colisno = '' then
             error('veuillez scanner le colis');
         lineno := 10000;
@@ -1022,7 +1020,7 @@ page 76000 "CB Vente"
         if colis.FindSet() then begin
             colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
             Colis.Validate("Picking line source", warehouseline."STF Source Line No");
-            colis.Validate("Final Quantity", finalquantity);
+            colis.Validate("Final Quantity", warehouseline."STF Picked Quantity");
             colis.Modify();
         end
         else begin
@@ -1033,7 +1031,7 @@ page 76000 "CB Vente"
             Colis.Validate("Picking Line No", warehouseline."Line No.");
             colis.Validate("Quantity", warehouseline."STF Controlled Quantity");
             Colis.Validate("Picking line source", warehouseline."STF Source Line No");
-            colis.Validate("Final Quantity", finalquantity);
+            colis.Validate("Final Quantity", warehouseline."STF Picked Quantity");
             colis.Insert();
         end;
     end;
