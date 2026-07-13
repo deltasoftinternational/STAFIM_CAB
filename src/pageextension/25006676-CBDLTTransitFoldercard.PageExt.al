@@ -1,4 +1,4 @@
-pageextension 76004 "CB DLT Transit Folder card" extends "DLT Transit Folder card"//25006676
+pageextension 76006 "CB DLT Transit Folder card" extends "DLT Transit Folder card"//25006676
 {
     layout
     {

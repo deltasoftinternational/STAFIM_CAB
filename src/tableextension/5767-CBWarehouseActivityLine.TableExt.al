@@ -50,7 +50,16 @@ tableextension 76001 "CB Warehouse Activity Line" extends "Warehouse Activity Li
             Editable = false;
             FieldClass = FlowField;
         }
-        field(76064; "CB user Filter"; code[50])
+        field(76006; "CB Cross"; boolean)
+        {
+            Caption = 'Colis';
+            CalcFormula = lookup("Bin"."CB Cross" where(
+                  "Code" = field("Bin code")
+              ));
+            Editable = false;
+            FieldClass = FlowField;
+        }
+        field(64; "CB user Filter"; code[50])
         {
             FieldClass = FlowFilter;
         }

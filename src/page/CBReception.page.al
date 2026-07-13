@@ -374,6 +374,30 @@ page 76006 "CB Reception"
                     Page.run(52003);
                 end;
 
+                trigger viewCrossBins(info: JsonObject)
+                var
+                    Warehouse_Activity_Line: Record "Warehouse Activity Line";
+                    CrossLines: JsonArray;
+                    CrossLine: JsonObject;
+                begin
+                    Warehouse_Activity_Line.Reset();
+                    Warehouse_Activity_Line.SetRange("Item No.", item_no_text);
+                    Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
+                    Warehouse_Activity_Line.SetRange("Action Type", Warehouse_Activity_Line."Action Type"::Place);
+                    Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
+                    Warehouse_Activity_Line.SetRange("Location Code", magsave);
+                    Warehouse_Activity_Line.SetRange("CB Cross", true);
+                    if Warehouse_Activity_Line.FindSet() then
+                        repeat
+                            Clear(CrossLine);
+                            CrossLine.Add('item', Warehouse_Activity_Line."Item No.");
+                            CrossLine.Add('bin', Warehouse_Activity_Line."Bin Code");
+                            CrossLine.Add('qty', Warehouse_Activity_Line."Qty. Outstanding");
+                            CrossLines.Add(CrossLine);
+                        until Warehouse_Activity_Line.Next() = 0;
+                    CurrPage.html.showCrossPopup(Format(CrossLines));
+                end;
+
                 trigger validate(item_json: JsonObject)
                 var
                     token_empl: JsonToken;
@@ -435,10 +459,12 @@ page 76006 "CB Reception"
                     item: record item;
                     line: decimal;
                     Registered_Whse_Activity_Line: record "Registered Whse. Activity Line";
-
+                    quantitycross: decimal;
+                    linef: decimal;
+                    qtef: decimal;
 
                 begin
-
+                    quantitycross := 0;
 
                     item_json.SelectToken('art', token_article);
                     token_article.WriteTo(article_no_text);
@@ -487,12 +513,16 @@ page 76006 "CB Reception"
                     Registered_Whse_Activity_Line.CalcSums("CB Scanned Quantity");
                     validatedquantity := Registered_Whse_Activity_Line."CB Scanned Quantity";
                     newQuantity := newQuantity - validatedquantity;
+                    qtef := newQuantity;
                     if newQuantity < 0 then begin
                         CurrPage.html.Viderqte();
                         error('%1 articles déja validés dans ce colis', validatedquantity);
                     end;
 
+
                     Warehouse_Activity_Line.Reset();
+                    Warehouse_Activity_Line.SetCurrentKey("Bin Code");
+                    Warehouse_Activity_Line.SetAscending("Bin Code", true);
                     //Warehouse_Activity_Line.SetRange("No.", cmdsave);
                     Warehouse_Activity_Line.SetRange("Item No.", article_no_text);
                     Warehouse_Activity_Line.SetRange("Activity Type", Warehouse_Activity_Line."Activity Type"::"Put-away");
@@ -500,9 +530,13 @@ page 76006 "CB Reception"
                     Warehouse_Activity_Line.SetRange("STF Colis", picked_barcode);
                     Warehouse_Activity_Line.setfilter("STF Assigned WMS User Name", '%1|%2', usname, '');
 
-                    Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
+                    //Warehouse_Activity_Line.SetRange("Bin Code", emplacement);
                     if Warehouse_Activity_Line.findset() then
                         repeat
+                            Warehouse_Activity_Line.CalcFields("CB Cross");
+                            if Warehouse_Activity_Line."CB Cross" then
+                                quantitycross += Warehouse_Activity_Line."Qty. Outstanding";
+
                             if Warehouse_Activity_Line."Qty. Outstanding" < newQuantity then begin
                                 Warehouse_Activity_Line.Validate("CB Scanned Quantity", Warehouse_Activity_Line."Qty. Outstanding");
                                 newQuantity := newQuantity - Warehouse_Activity_Line."Qty. Outstanding";
@@ -518,9 +552,12 @@ page 76006 "CB Reception"
 
                             Warehouse_Activity_Line.Modify();
                             line := Warehouse_Activity_Line."Line No.";
-                            WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
-                            WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
-                            WarehouseActivityTakeLine.modify();
+                            if Warehouse_Activity_Line."Bin Code" = emplacement then begin
+                                linef := Warehouse_Activity_Line."Line No.";
+                                WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
+                                WarehouseActivityTakeLine.Validate("CB Scanned Quantity", qtef);
+                                WarehouseActivityTakeLine.modify();
+                            end;
 
                         until Warehouse_Activity_Line.Next() = 0;
                     if newQuantity > 0 then begin
@@ -538,8 +575,8 @@ page 76006 "CB Reception"
 
                         Warehouse_Activity_Line.Modify();
                         line := Warehouse_Activity_Line."Line No.";
-                        WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", Warehouse_Activity_Line."Line No." - 10000);
-                        WarehouseActivityTakeLine.Validate("CB Scanned Quantity", Warehouse_Activity_Line."CB Scanned Quantity");
+                        WarehouseActivityTakeLine.get(Warehouse_Activity_Line."Activity Type", Warehouse_Activity_Line."No.", linef - 10000);
+                        WarehouseActivityTakeLine.Validate("CB Scanned Quantity", qtef);
                         WarehouseActivityTakeLine.modify();
 
                     end;
@@ -582,6 +619,7 @@ page 76006 "CB Reception"
                         scan.Insert(true);
 
                     end;
+                    CurrPage.html.showCrossBins(quantitycross);
                     if vide_flag = 'TRUE' then
                         CurrPage.html.ViderCAB();
                 end;
@@ -823,6 +861,8 @@ page 76006 "CB Reception"
 
         out.APPEND('<label for="article"><b>Article</b></label> <input id="articleNo" type="text" name="article" readonly="readonly" required>');
 
+        out.APPEND('<div id="crossBinLink" style="display:none; margin-top:10px; margin-bottom:10px;"><a href="#" onclick="viewCrossBins(); return false;" style="color:#e64a19; font-weight:bold; font-size:14px; text-decoration:underline; cursor:pointer;">&#128205; Voir emplacements Cross (<span id="crossQty">0</span>)</a></div>');
+
         out.APPEND('<label id="cabcopy" style="display:none;"></label>');
         out.APPEND('<div style="">');
 
@@ -831,6 +871,13 @@ page 76006 "CB Reception"
 
         out.APPEND('<div style="text-align:center;"> <button onclick="reset()" style="margin-right:4%;background-color: cadetblue;width: 40%;">Réinitialiser</button> <button onclick="finish2()" style="width:40%;margin-left:4%;">Aperçu</button><button onclick="terminer()" style="margin-left:4%;background-color: red;width:40% ">Terminer</button> </div>');
         out.APPEND('<div id="myModal" class="modal";> <div class="modal-content" style="margin-top:220px;"> <p> Le reception a été terminée avec succès. Souhaitez-vous continuer ou fermer ?</p> <button class="modal-btn" onclick="fermerModal()">Sortir de lapplication</button> <button id="cmdv" name="cmdv" type="text" onclick="back()" class="modal-btn">Revenir au menu précédent</button> </div> </div>');
+
+        out.APPEND('<div id="crossModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; justify-content:center; align-items:center;">');
+        out.APPEND('<div style="background:#fff; border-radius:10px; padding:20px; max-width:90%; max-height:70%; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.3);">');
+        out.APPEND('<h3 style="margin:0 0 15px 0; color:#e64a19; text-align:center;">Emplacements Cross</h3>');
+        out.APPEND('<table id="crossTable" style="width:100%; border-collapse:collapse;"><thead><tr style="background:#e64a19; color:#fff;"><th style="padding:10px; text-align:left;">Article</th><th style="padding:10px; text-align:left;">Emplacement</th><th style="padding:10px; text-align:right;">Quantité</th></tr></thead><tbody></tbody></table>');
+        out.APPEND('<div style="text-align:center; margin-top:15px;"><button onclick="closeCrossModal()" style="background:#e64a19; color:#fff; border:none; padding:10px 30px; border-radius:5px; font-size:14px; cursor:pointer;">Fermer</button></div>');
+        out.APPEND('</div></div>');
 
         out.APPEND('</body> </html>');
 

@@ -634,6 +634,7 @@ function reset() {
     var qtea = document.getElementById('qtea');
     var qtes = document.getElementById('qtes');
     var qtestock = document.getElementById('qtestock');
+    var crossLink = document.getElementById('crossBinLink');
 
 
     var Lot = document.getElementById('Lot');
@@ -651,6 +652,7 @@ function reset() {
     Lot.value = "";
     daeEx.value = "";
     unite.value = "";
+    if (crossLink) crossLink.style.display = 'none';
     changeColor('White');
     afficheMessage("", 'white');
     cab.focus();
@@ -660,6 +662,50 @@ function reset() {
 function changeColor(color) {
     var message = document.getElementById('message');
     message.style.background = color;
+}
+
+function showCrossBins(quantitycross) {
+    var crossLink = document.getElementById('crossBinLink');
+    var crossQty = document.getElementById('crossQty');
+    if (crossLink) {
+        if (quantitycross > 0) {
+            crossLink.style.display = 'block';
+            crossQty.innerText = quantitycross;
+        } else {
+            crossLink.style.display = 'none';
+            crossQty.innerText = '0';
+        }
+    }
+}
+
+function viewCrossBins() {
+    const info = { "action": "viewCrossBins" };
+    Microsoft.Dynamics.NAV.InvokeExtensibilityMethod('viewCrossBins', [info]);
+}
+
+function showCrossPopup(crossData) {
+    var modal = document.getElementById('crossModal');
+    var tbody = document.getElementById('crossTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    var lines = JSON.parse(crossData);
+    if (lines.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:10px; text-align:center; color:#999;">Aucune ligne Cross</td></tr>';
+    } else {
+        for (var i = 0; i < lines.length; i++) {
+            var row = '<tr style="border-bottom:1px solid #eee;">';
+            row += '<td style="padding:10px;">' + lines[i].item + '</td>';
+            row += '<td style="padding:10px;">' + lines[i].bin + '</td>';
+            row += '<td style="padding:10px; text-align:right; font-weight:bold;">' + lines[i].qty + '</td>';
+            row += '</tr>';
+            tbody.innerHTML += row;
+        }
+    }
+    modal.style.display = 'flex';
+}
+
+function closeCrossModal() {
+    var modal = document.getElementById('crossModal');
+    modal.style.display = 'none';
 }
 
 function validation() {
