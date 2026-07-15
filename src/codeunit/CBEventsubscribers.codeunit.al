@@ -7,4 +7,11 @@ codeunit 76001 "CB Event Subscribers"
             WarehouseActivityLine."CB Scanned Quantity" := 0;
     end;
 
+    [EventSubscriber(ObjectType::Report, Report::"Whse. Calculate Inventory", OnBeforeWhseJnlLineInsert, '', false, false)]
+    local procedure "inv_OnBeforeWhseJnlLineInsert"(var WarehouseJournalLine: Record "Warehouse Journal Line"; var WarehouseEntry: Record "Warehouse Entry"; var NextLineNo: Integer)
+    begin
+        WarehouseJournalLine.Validate("Qty. (Phys. Inventory)", 0);
+    end;
+
+
 }

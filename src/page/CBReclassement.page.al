@@ -58,7 +58,9 @@ page 76010 "CB Reclassement"
                     mag: text;
                     recepToken: JsonToken;
                     magtoken: JsonToken;
-                    Warehouse_Journal_Batch: record "Warehouse Journal Batch";
+                    InvMgt: Codeunit "CB Inventory Mgt";
+                    Warehouse_Journal_Batch: Record "Warehouse Journal Batch";
+                    ItemJnlBatch: Record "Item Journal Batch";
 
                 begin
 
@@ -75,13 +77,24 @@ page 76010 "CB Reclassement"
                     magSave := mag;
 
                     recep := recep.Replace('"', '');
-                    Warehouse_Journal_Batch.Reset();
 
-                    Warehouse_Journal_Batch.SetRange("Journal Template Name", batchname);
-                    Warehouse_Journal_Batch.setrange("location code", mag);
-                    Warehouse_Journal_Batch.setrange(Name, recep);
-                    if not Warehouse_Journal_Batch.FindSet() then
-                        error('feuille de reclassement non valide');
+                    if InvMgt.IsDirectedPutAwayAndPick(mag) then begin
+                        isDirected := true;
+                        Warehouse_Journal_Batch.Reset();
+                        Warehouse_Journal_Batch.SetRange("Journal Template Name", batchname);
+                        Warehouse_Journal_Batch.SetRange("Location Code", mag);
+                        Warehouse_Journal_Batch.SetRange(Name, recep);
+                        if not Warehouse_Journal_Batch.FindSet() then
+                            Error('Feuille de reclassement entrepôt non valide');
+                    end else begin
+                        isDirected := false;
+                        itemBatchName := InvMgt.GetItemReclassTemplateName();
+                        ItemJnlBatch.Reset();
+                        ItemJnlBatch.SetRange("Journal Template Name", itemBatchName);
+                        ItemJnlBatch.SetRange(Name, recep);
+                        if not ItemJnlBatch.FindSet() then
+                            Error('Feuille de reclassement article non valide');
+                    end;
 
                     CurrPage.html.recepverify();
 
@@ -97,17 +110,20 @@ page 76010 "CB Reclassement"
                     empl: Text;
                     cabToken: JsonToken;
                     cabv, descripton : Text;
-                    item: record item;
+                    item: Record Item;
                     ICR: Record "Item Reference";
                     bbToken: JsonToken;
-                    cabFirstPart: text;
+                    cabFirstPart: Text;
                     cabFirstPartToken: JsonToken;
-                    cleanedCab: text;
-                    cleanedBin: text;
+                    cleanedCab: Text;
+                    cleanedBin: Text;
                     arttext: Text;
-                    Bin_Content: record "Bin Content";
-                    Bin: record "Bin";
+                    Bin_Content: Record "Bin Content";
+                    Bin: Record Bin;
                     BinType: Record "Bin Type";
+                    ItemLedgerEntry: Record "Item Ledger Entry";
+                    InvMgt: Codeunit "CB Inventory Mgt";
+                    TotalQty: Decimal;
 
                 begin
                     cab.SelectToken('cab', cabToken);
@@ -118,9 +134,6 @@ page 76010 "CB Reclassement"
                     cab.SelectToken('b', bbToken);
                     bbToken.WriteTo(bb);
                     bb := bb.Replace('"', '');
-
-
-
 
 
                     cab.SelectToken('cabFirstPart', cabFirstPartToken);
@@ -138,36 +151,54 @@ page 76010 "CB Reclassement"
                     ICR.Reset();
                     ICR.SetRange(ICR."Reference Type", ICR."Reference Type"::"Bar Code");
                     ICR.SetRange(ICR."Reference No.", cleanedCab);
-                    if (ICR.Findset()) then
+                    if (ICR.FindSet()) then
                         repeat
                             arttext := ICR."Item No.";
                         until (ICR.Next() = 0);
-                    if item.get(arttext) then
+                    if item.Get(arttext) then
                         descripton := item.Description
                     else begin
                         CurrPage.html.reset();
-                        error('article non existant');
+                        Error('article non existant');
                     end;
 
 
                     CurrPage.html.populateitem(arttext, descripton);
                     CurrPage.html.clearallrec();
-                    Bin_Content.Reset();
-                    Bin_Content.SetRange("Item No.", arttext);
-                    Bin_Content.SetRange("location code", magsave);
-                    Bin_Content.setfilter("Quantity (Base)", '>%1', 0);
-                    if Bin_Content.findset() then
-                        repeat
-                            Bin_Content.calcfields("Quantity (Base)");
-                            Bin.get(Bin_Content."Location Code", Bin_Content."Bin Code");
-                            if Bin."Bin Type Code" = '' then
-                                CurrPage.html.addRow(Bin_Content."Location Code", Bin_Content."Bin Code", Bin_Content."Quantity (Base)");
-                            if Bin."Bin Type Code" <> '' then
-                                if BinType.Get(Bin."Bin Type Code") then
-                                    if not BinType.Receive then
-                                        CurrPage.html.addRow(Bin_Content."Location Code", Bin_Content."Bin Code", Bin_Content."Quantity (Base)");
 
-                        until Bin_Content.next() = 0;
+                    if isDirected then begin
+                        Bin_Content.Reset();
+                        Bin_Content.SetRange("Item No.", arttext);
+                        Bin_Content.SetRange("Location Code", magSave);
+                        Bin_Content.SetFilter("Quantity (Base)", '>%1', 0);
+                        if Bin_Content.FindSet() then
+                            repeat
+                                Bin_Content.CalcFields("Quantity (Base)");
+                                Bin.Get(Bin_Content."Location Code", Bin_Content."Bin Code");
+                                if Bin."Bin Type Code" = '' then
+                                    CurrPage.html.addRow(Bin_Content."Location Code", Bin_Content."Bin Code", Bin_Content."Quantity (Base)");
+                                if Bin."Bin Type Code" <> '' then
+                                    if BinType.Get(Bin."Bin Type Code") then
+                                        if not BinType.Receive then
+                                            CurrPage.html.addRow(Bin_Content."Location Code", Bin_Content."Bin Code", Bin_Content."Quantity (Base)");
+                            until Bin_Content.Next() = 0;
+                    end else begin
+                        Bin_Content.Reset();
+                        Bin_Content.SetRange("Item No.", arttext);
+                        Bin_Content.SetRange("Location Code", magSave);
+                        Bin_Content.SetFilter("Quantity (Base)", '>%1', 0);
+                        if Bin_Content.FindSet() then
+                            repeat
+                                Bin_Content.CalcFields("Quantity (Base)");
+                                CurrPage.html.addRow(Bin_Content."Location Code", Bin_Content."Bin Code", Bin_Content."Quantity (Base)");
+                            until Bin_Content.Next() = 0
+                        else begin
+                            item.SetRange("Location Filter", magSave);
+                            item.CalcFields(Inventory);
+                            if item.Inventory > 0 then
+                                CurrPage.html.addRow(magSave, '', item.Inventory);
+                        end;
+                    end;
                 end;
 
 
@@ -182,24 +213,19 @@ page 76010 "CB Reclassement"
                     location: Text;
                     locationd: Text;
                     valider: Text;
-                    item: record item;
-                    Bin_Content: record "Bin Content";
-                    Bin: record "Bin";
-                    lineno: decimal;
-                    Warehouse_Journal_Line: record "Warehouse Journal Line";
-                    description: text;
+                    item: Record Item;
+                    Bin_Content: Record "Bin Content";
+                    Bin: Record Bin;
+                    lineno: Decimal;
+                    Warehouse_Journal_Line: Record "Warehouse Journal Line";
+                    ItemJnlLine: Record "Item Journal Line";
+                    description: Text;
                 begin
                     lineno := 0;
-
-
 
                     art.SelectToken('articleNo', arttexttoken);
                     arttexttoken.WriteTo(arttext);
                     arttext := arttext.Replace('"', '');
-
-
-
-
 
                     art.SelectToken('empl', locationtoken);
                     locationtoken.WriteTo(location);
@@ -212,55 +238,83 @@ page 76010 "CB Reclassement"
                     art.SelectToken('valider', validertoken);
                     validertoken.WriteTo(valider);
                     valider := valider.Replace('"', '');
-                    if item.get(arttext) then
+                    if item.Get(arttext) then
                         description := item.Description
                     else begin
                         CurrPage.html.reset();
-                        error('Article non existant');
+                        Error('Article non existant');
                     end;
 
-                    Bin_Content.Reset();
-                    Bin_Content.setrange("Item No.", arttext);
-                    Bin_Content.SetFilter("Quantity (Base)", '>%1', 0);
-                    Bin_Content.setrange("Bin Code", location);
-                    if not Bin_Content.FindSet() then begin
-                        CurrPage.html.reset();
-                        error('Veuillez vérifier l''emplacement');
-                    end;
-                    Bin.Reset();
-                    Bin.setrange("Location Code", magsave);
-                    Bin.setrange("Code", locationd);
-                    if not Bin.FindSet() then
-                        CurrPage.html.focusdest()
-
-                    else begin
-                        Warehouse_Journal_Line.Reset();
-                        Warehouse_Journal_Line.SetRange("Journal Template Name", batchname);
-                        Warehouse_Journal_Line.SetRange("Journal Batch Name", feuillesave);
-                        Warehouse_Journal_Line.SetRange("Item No.", arttext);
-                        Warehouse_Journal_Line.SetRange("from Bin Code", location);
-                        Warehouse_Journal_Line.SetRange("To Bin Code", locationd);
-                        if Warehouse_Journal_Line.FindSet() then begin
-                            lineno := Warehouse_Journal_Line."Line No.";
-                            CurrPage.html.getlocationd(valider, format(lineno), '0', description, Format(Warehouse_Journal_Line.Quantity));
-                        end
+                    if isDirected then begin
+                        Bin_Content.Reset();
+                        Bin_Content.SetRange("Item No.", arttext);
+                        Bin_Content.SetFilter("Quantity (Base)", '>%1', 0);
+                        Bin_Content.SetRange("Bin Code", location);
+                        if not Bin_Content.FindSet() then begin
+                            CurrPage.html.reset();
+                            Error('Veuillez vérifier l''emplacement');
+                        end;
+                        Bin.Reset();
+                        Bin.SetRange("Location Code", magSave);
+                        Bin.SetRange("Code", locationd);
+                        if not Bin.FindSet() then
+                            CurrPage.html.focusdest()
                         else begin
                             Warehouse_Journal_Line.Reset();
-                            Warehouse_Journal_Line.SetCurrentKey("Line No.");
                             Warehouse_Journal_Line.SetRange("Journal Template Name", batchname);
                             Warehouse_Journal_Line.SetRange("Journal Batch Name", feuillesave);
-                            if Warehouse_Journal_Line.findlast() then begin
+                            Warehouse_Journal_Line.SetRange("Item No.", arttext);
+                            Warehouse_Journal_Line.SetRange("From Bin Code", location);
+                            Warehouse_Journal_Line.SetRange("To Bin Code", locationd);
+                            if Warehouse_Journal_Line.FindSet() then begin
                                 lineno := Warehouse_Journal_Line."Line No.";
+                                CurrPage.html.getlocationd(valider, Format(lineno), '0', description, Format(Warehouse_Journal_Line.Quantity));
+                            end else begin
+                                Warehouse_Journal_Line.Reset();
+                                Warehouse_Journal_Line.SetCurrentKey("Line No.");
+                                Warehouse_Journal_Line.SetRange("Journal Template Name", batchname);
+                                Warehouse_Journal_Line.SetRange("Journal Batch Name", feuillesave);
+                                if Warehouse_Journal_Line.FindLast() then begin
+                                    lineno := Warehouse_Journal_Line."Line No.";
+                                    CurrPage.html.getlocationd(valider, '0', Format(lineno), description, '0');
+                                end else
+                                    CurrPage.html.getlocationd(valider, '0', '0', description, '0');
+                            end;
+                        end;
+                    end else begin
+                        Bin.Reset();
+                        Bin.SetRange("Location Code", magSave);
+                        Bin.SetRange("Code", locationd);
+                        if not Bin.FindSet() then begin
+                            if locationd = '' then begin
+                                CurrPage.html.focusdest();
+                                exit;
+                            end;
+                        end;
 
-                                CurrPage.html.getlocationd(valider, '0', format(lineno), description, '0');
-                            end
-                            else
+                        ItemJnlLine.Reset();
+                        ItemJnlLine.SetRange("Journal Template Name", itemBatchName);
+                        ItemJnlLine.SetRange("Journal Batch Name", feuillesave);
+                        ItemJnlLine.SetRange("Item No.", arttext);
+                        if location <> '' then
+                            ItemJnlLine.SetRange("Bin Code", location);
+                        if locationd <> '' then
+                            ItemJnlLine.SetRange("New Bin Code", locationd);
+                        if ItemJnlLine.FindSet() then begin
+                            lineno := ItemJnlLine."Line No.";
+                            CurrPage.html.getlocationd(valider, Format(lineno), '0', description, Format(ItemJnlLine.Quantity));
+                        end else begin
+                            ItemJnlLine.Reset();
+                            ItemJnlLine.SetCurrentKey("Line No.");
+                            ItemJnlLine.SetRange("Journal Template Name", itemBatchName);
+                            ItemJnlLine.SetRange("Journal Batch Name", feuillesave);
+                            if ItemJnlLine.FindLast() then begin
+                                lineno := ItemJnlLine."Line No.";
+                                CurrPage.html.getlocationd(valider, '0', Format(lineno), description, '0');
+                            end else
                                 CurrPage.html.getlocationd(valider, '0', '0', description, '0');
                         end;
                     end;
-
-
-
                 end;
 
                 trigger CheckCAB_3(art: JsonObject)
@@ -557,38 +611,65 @@ page 76010 "CB Reclassement"
 
     procedure updatereclassement(lineno: decimal; feuille: text; quantity: decimal)
     var
-        Warehouse_Journal_Line: record "Warehouse Journal Line";
+        InvMgt: Codeunit "CB Inventory Mgt";
+        Warehouse_Journal_Line: Record "Warehouse Journal Line";
+        ItemJnlLine: Record "Item Journal Line";
     begin
-        Warehouse_Journal_Line.get(batchname, feuille, magsave, lineno);
-        Warehouse_Journal_Line.validate("Quantity", quantity);
-        Warehouse_Journal_Line.modify();
+        if InvMgt.IsDirectedPutAwayAndPick(magSave) then begin
+            Warehouse_Journal_Line.Get(batchname, feuille, magSave, lineno);
+            Warehouse_Journal_Line.Validate("Quantity", quantity);
+            Warehouse_Journal_Line.Modify();
+        end else begin
+            ItemJnlLine.Get(itemBatchName, feuille, lineno);
+            ItemJnlLine.Validate(Quantity, quantity);
+            ItemJnlLine.Modify(true);
+        end;
     end;
 
     procedure inserteclassement(lineno: decimal; feuille: text; quantity: decimal; item: text; source: text; dest: text)
     var
-        Warehouse_Journal_Line: record "Warehouse Journal Line";
+        InvMgt: Codeunit "CB Inventory Mgt";
+        Warehouse_Journal_Line: Record "Warehouse Journal Line";
+        ItemJnlLine: Record "Item Journal Line";
     begin
-        Warehouse_Journal_Line.Init();
-        Warehouse_Journal_Line."Journal Template Name" := batchname;
-        Warehouse_Journal_Line."Journal Batch Name" := feuille;
-        Warehouse_Journal_Line."Registering Date" := today;
-        Warehouse_Journal_Line."Line No." := lineno;
-        Warehouse_Journal_Line.Validate("Location Code", magSave);
-        Warehouse_Journal_Line.Validate("Item No.", item);
-        Warehouse_Journal_Line.Validate("From Bin Code", source);
-        Warehouse_Journal_Line.Validate("To Bin Code", dest);
-        Warehouse_Journal_Line.validate("Quantity", quantity);
-        Warehouse_Journal_Line.Insert(true);
+        if InvMgt.IsDirectedPutAwayAndPick(magSave) then begin
+            Warehouse_Journal_Line.Init();
+            Warehouse_Journal_Line."Journal Template Name" := batchname;
+            Warehouse_Journal_Line."Journal Batch Name" := feuille;
+            Warehouse_Journal_Line."Registering Date" := Today;
+            Warehouse_Journal_Line."Line No." := lineno;
+            Warehouse_Journal_Line.Validate("Location Code", magSave);
+            Warehouse_Journal_Line.Validate("Item No.", item);
+            Warehouse_Journal_Line.Validate("From Bin Code", source);
+            Warehouse_Journal_Line.Validate("To Bin Code", dest);
+            Warehouse_Journal_Line.Validate("Quantity", quantity);
+            Warehouse_Journal_Line.Insert(true);
+        end else begin
+            ItemJnlLine.Init();
+            ItemJnlLine."Journal Template Name" := itemBatchName;
+            ItemJnlLine."Journal Batch Name" := feuille;
+            ItemJnlLine."Line No." := lineno;
+            ItemJnlLine.Validate("Entry Type", ItemJnlLine."Entry Type"::Transfer);
+            ItemJnlLine.Validate("Posting Date", Today);
+            ItemJnlLine.Validate("Document No.", feuille);
+            ItemJnlLine.Validate("Item No.", item);
+            ItemJnlLine.Validate("Location Code", magSave);
+            if source <> '' then
+                ItemJnlLine.Validate("Bin Code", source);
+            ItemJnlLine.Validate("New Location Code", magSave);
+            if dest <> '' then
+                ItemJnlLine.Validate("New Bin Code", dest);
+            ItemJnlLine.Validate(Quantity, quantity);
+            ItemJnlLine.Insert(true);
+        end;
     end;
 
     procedure Login(): Text
     var
-        //SO: Record "Company Information";
         US: Record "ADCS User";
         out: Text;
     begin
 
-        //SO.FindSet();
         out := '<!DOCTYPE html> <html> <head><meta name="viewport" content="width=device-width, initial-scale=1"> <style>html { overflow-y: hidden; } body {font-family: Arial, Helvetica, sans-serif;} form {border: 3px solid #f1f1f1;} input[type=text], input[type=password] { width: 100%; padding: 12px 20px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; } select{ width: 100%; padding: 10px 10px; margin: 2px 0; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; } button { background-color: #04AA6D; color: white; padding: 20px 15px; margin: 6px 0; border: none; cursor: pointer; width: 100%; } button:hover { opacity: 0.8; } .cancelbtn { width: auto; padding: 10px 18px; background-color: #f44336; } .imgcontainer { text-align: center; margin: 24px 0 12px 0; } img.avatar { width: 40%; border-radius: 50%; } .container { padding: 16px; } span.psw { float: right; padding-top: 16px; } /* Change styles for span and cancel button on extra small screens */ @media screen and (max-width: 300px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } } </style> </head> ';
         out += '<body> <h2>Reclassement</h2><!--<div><center><img width="100px"height="100px" src="C:\Users\KSBOUI\Documents\AL\LeMoteurCodebarres\SRC\Pages\logo.png"/></center></div>--> <div class="container"> <label for="uname"><b>Utilisateur</b></label>';
         out += '<select id="user" name="uname">';
@@ -787,28 +868,48 @@ page 76010 "CB Reclassement"
 
     procedure reclass(mag: text)
     var
-        Warehouse_Journal_Template: record "Warehouse Journal Template";
-        Warehouse_Journal_Batch: record "Warehouse Journal Batch";
-        name: text;
-        location: record location;
+        InvMgt: Codeunit "CB Inventory Mgt";
+        Warehouse_Journal_Template: Record "Warehouse Journal Template";
+        Warehouse_Journal_Batch: Record "Warehouse Journal Batch";
+        ItemJnlTemplate: Record "Item Journal Template";
+        ItemJnlBatch: Record "Item Journal Batch";
+        name: Text;
+        location: Record Location;
     begin
         CurrPage.html.recep('', '');
-        Warehouse_Journal_Template.Reset();
-        Warehouse_Journal_Template.setrange("Type", Warehouse_Journal_Template.Type::Reclassification);
-        if Warehouse_Journal_Template.findlast() then begin
-            batchname := Warehouse_Journal_Template.name;
-            Warehouse_Journal_Batch.Reset();
 
-            Warehouse_Journal_Batch.SetRange("Journal Template Name", Warehouse_Journal_Template.name);
-            Warehouse_Journal_Batch.setrange("location code", mag);
-            if Warehouse_Journal_Batch.FindSet() then
-                repeat
-
-                    name := Warehouse_Journal_Batch.Name;
-                    CurrPage.html.recep(name, batchname);
-
-                until Warehouse_Journal_Batch.Next() = 0;
+        if InvMgt.IsDirectedPutAwayAndPick(mag) then begin
+            isDirected := true;
+            Warehouse_Journal_Template.Reset();
+            Warehouse_Journal_Template.SetRange("Type", Warehouse_Journal_Template.Type::Reclassification);
+            if Warehouse_Journal_Template.FindLast() then begin
+                batchname := Warehouse_Journal_Template.Name;
+                Warehouse_Journal_Batch.Reset();
+                Warehouse_Journal_Batch.SetRange("Journal Template Name", Warehouse_Journal_Template.Name);
+                Warehouse_Journal_Batch.SetRange("Location Code", mag);
+                if Warehouse_Journal_Batch.FindSet() then
+                    repeat
+                        name := Warehouse_Journal_Batch.Name;
+                        CurrPage.html.recep(name, batchname);
+                    until Warehouse_Journal_Batch.Next() = 0;
+            end;
+        end else begin
+            isDirected := false;
+            ItemJnlTemplate.Reset();
+            ItemJnlTemplate.SetRange(Type, ItemJnlTemplate.Type::Transfer);
+            if ItemJnlTemplate.FindFirst() then begin
+                itemBatchName := ItemJnlTemplate.Name;
+                batchname := ItemJnlTemplate.Name;
+                ItemJnlBatch.Reset();
+                ItemJnlBatch.SetRange("Journal Template Name", ItemJnlTemplate.Name);
+                if ItemJnlBatch.FindSet() then
+                    repeat
+                        name := ItemJnlBatch.Name;
+                        CurrPage.html.recep(name, itemBatchName);
+                    until ItemJnlBatch.Next() = 0;
+            end;
         end;
+
         if mag <> '' then
             CurrPage.html.recep2(mag)
         else begin
@@ -816,7 +917,7 @@ page 76010 "CB Reclassement"
             if location.FindSet() then
                 repeat
                     CurrPage.html.recep2(location.Code);
-                until location.next() = 0;
+                until location.Next() = 0;
         end;
         CurrPage.html.recepfocus();
     end;
@@ -853,6 +954,8 @@ page 76010 "CB Reclassement"
         cmdvSave: Text;
         invSave: Text;
         compSave: Text;
-        feuillesave: text;
+        feuillesave: Text;
+        isDirected: Boolean;
+        itemBatchName: Code[10];
 }
 

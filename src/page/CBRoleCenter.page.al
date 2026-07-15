@@ -103,6 +103,33 @@ page 76003 "CB Role Center"
                 }
 
             }
+            group(Inventaire)
+            {
+                Caption = 'Inventaire';
+                Image = Calculator;
+
+                action(ConnectInv)
+                {
+                    Caption = 'Inventaire';
+                    RunObject = Page "CB Inventaire";
+                    ApplicationArea = All;
+                    Image = Calculator;
+                }
+
+            }
+            group(Parametrage)
+            {
+                Caption = 'Paramétrage';
+                Image = Setup;
+
+                action(ConnectSetup)
+                {
+                    Caption = 'Paramétrage inventaire';
+                    RunObject = Page "CB Inventory Setup";
+                    ApplicationArea = All;
+                    Image = Setup;
+                }
+            }
 
 
         }

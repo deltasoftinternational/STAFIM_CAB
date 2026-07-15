@@ -91,25 +91,34 @@ page 76007 "CB Inventaire"
                 trigger scan(scav: JsonObject)
                 var
                     a: Integer;
-                    RL: Record "Phys. Invt. Record Line";
-                    ModalResult: Action;
+                    INV: Record "CB Historique Scan";
+                    WhseJnlLine: Record "Warehouse Journal Line";
+                    ItemJnlLine: Record "Item Journal Line";
+                    InvMgt: Codeunit "CB Inventory Mgt";
+                    TemplateName: Code[10];
                 begin
-                    RL.Reset();
-                    RL.SetCurrentKey("Bin Code");
-                    RL.SetAscending("Bin Code", true);
-                    RL.SetRange("Order No.", invSave);
-                    RL.SetFilter("Recording No.", enregistrementSave);
-                    RL.SetRange(Recorded, false);
-                    if RL.FindSet() then begin
-                        ModalResult := Page.RunModal(76009, RL); // Waits for page close
-                        RL.Reset();
-                        RL.SetRange("Order No.", invSave);
-                        RL.SetFilter("Recording No.", enregistrementSave);
-                        RL.SetRange(Recorded, false);
-                        if RL.FindSet() then
-                            a := RL.Count;
-                        CurrPage.html.nonscanned(Format(a));
+                    if InvMgt.IsDirectedPutAwayAndPick(magSave) then begin
+                        TemplateName := InvMgt.GetWhsePhysInvTemplateName();
+                        WhseJnlLine.Reset();
+                        WhseJnlLine.SetRange("Journal Template Name", TemplateName);
+                        WhseJnlLine.SetRange("Journal Batch Name", invSave);
+                        WhseJnlLine.SetRange("Location Code", magSave);
+                        WhseJnlLine.SetRange("CB Inventaire Validé", false);
+                        WhseJnlLine.SetRange("CB Comptage 1", 0);
+                        if WhseJnlLine.FindSet() then
+                            a := WhseJnlLine.Count;
+                    end else begin
+                        TemplateName := InvMgt.GetItemPhysInvTemplateName();
+                        ItemJnlLine.Reset();
+                        ItemJnlLine.SetRange("Journal Template Name", TemplateName);
+                        ItemJnlLine.SetRange("Journal Batch Name", invSave);
+                        ItemJnlLine.SetRange("Location Code", magSave);
+                        ItemJnlLine.SetRange("CB Inventaire Validé", false);
+                        ItemJnlLine.SetRange("CB Comptage 1", 0);
+                        if ItemJnlLine.FindSet() then
+                            a := ItemJnlLine.Count;
                     end;
+                    CurrPage.html.nonscanned(Format(a));
                 end;
 
                 trigger info(info: JsonObject)
@@ -340,7 +349,6 @@ page 76007 "CB Inventaire"
                 trigger finish(item: JsonObject)
                 var
                     USER: Record "CB USER";
-                    ENR: Record "Phys. Invt. Record Header";
                     inv: text[50];
                     art: text;
                     artToken: JsonToken;
@@ -358,16 +366,9 @@ page 76007 "CB Inventaire"
                     compToken.WriteTo(comp);
                     comp := comp.Replace('"', '');
 
-                    USER.reset();
+                    USER.Reset();
                     USER.SetRange(User, us);
-                    if USER.Findfirst() then;
-
-                    ENR.Get(User.Enregistrement, user.no);
-                    ENR.SetFilter(ENR."Recording No.", enregistrementSave);
-                    ENR.SetFilter(ENR."Order No.", invSave);
-                    if ENR.FindFirst() then;
-
-                    ENR.Modify();
+                    if USER.FindFirst() then;
 
                     Message('Enregistrement Terminé');
                 end;
@@ -436,9 +437,7 @@ page 76007 "CB Inventaire"
                 trigger finish2(item: JsonObject)
                 var
                     USER: Record "CB USER";
-                    ENR: Record "Phys. Invt. Record Header";
                     INVV: Record "CB Historique Scan";
-                    INVBC: Record "Phys. Invt. record Line";
                     inv: text[50];
                     art: text;
                     artToken: JsonToken;
@@ -456,26 +455,16 @@ page 76007 "CB Inventaire"
                     compToken.WriteTo(comp);
                     comp := comp.Replace('"', '');
 
-                    USER.reset();
+                    USER.Reset();
                     USER.SetRange(User, us);
-                    if USER.Findfirst() then;
+                    if USER.FindFirst() then;
 
-                    INVV.reset();
-                    INVBC.reset();
-
-                    INVBC.SetRange("Order No.", inv);
-                    INVBC.SetRange("Recording No.", USER.no);
-                    USER.Next();
-
-
-                    ENR.Get(User.Enregistrement, user.no);
-                    ENR.SetFilter(ENR."Recording No.", enregistrementSave);
-                    ENR.SetFilter(ENR."Order No.", invSave);
+                    INVV.Reset();
                     INVV.SetRange("Document No.", inv);
                     INVV.SetFilter(Enregistrement, enregistrementSave);
                     INVV.SetRange(user, us);
                     if INVV.FindSet() then;
-                    Page.run(76001, INVV);
+                    Page.Run(76001, INVV);
                 end;
             }
         }
@@ -489,17 +478,13 @@ page 76007 "CB Inventaire"
     procedure finish3(item: JsonObject)
     var
         USER: Record "CB USER";
-        adcs: record "ADCS User";
-
-        ENR: Record "Phys. Invt. Record Header";
-        bcInv: Record "CB Historique Scan";
-        physInvRecord: Record "Phys. Invt. record Line";
-        physInvOrder: Record "Phys. Invt. Order Line";
-        art: text;
+        adcs: Record "ADCS User";
+        InvMgt: Codeunit "CB Inventory Mgt";
+        art: Text;
         artToken: JsonToken;
         compToken: JsonToken;
-        comp: text;
-        us: text;
+        comp: Text;
+        us: Text;
     begin
         item.SelectToken('art', artToken);
         artToken.WriteTo(art);
@@ -510,61 +495,23 @@ page 76007 "CB Inventaire"
         comp := comp.Replace('"', '');
 
         us := userSave;
-        USER.reset();
+        USER.Reset();
         USER.SetRange(User, us);
         if USER.FindFirst() then;
-        bcInv.Reset();
-        physInvRecord.Reset();
-        physInvRecord.SetRange("Order No.", invSave);
-        physInvRecord.SetRange("Recording No.", USER.no);
-        ENR.Get(USER.Enregistrement, USER.no);
-        bcInv.SetRange("Document No.", invSave);
-        bcInv.SetRange(user, us);
-        bcInv.SetRange(Enregistrement, USER.no);
-        adcs.get(us);
+        adcs.Get(us);
 
+        if InvMgt.IsDirectedPutAwayAndPick(adcs."STF Location") then
+            InvMgt.FinalizeWhseInventory(
+                InvMgt.GetWhsePhysInvTemplateName(),
+                invSave,
+                adcs."STF Location")
+        else
+            InvMgt.FinalizeItemInventory(
+                InvMgt.GetItemPhysInvTemplateName(),
+                invSave,
+                adcs."STF Location");
 
-
-        while bcInv.Next() <> 0 do begin
-            physInvRecord.Reset();
-            physInvRecord.SetRange("Order No.", invSave);
-
-            physInvRecord.SetRange("Recording No.", USER.no);
-            physInvRecord.SetRange("Item No.", bcInv.article);
-            if physInvRecord.FindSet() then begin
-                /*case bcInv.comptage of
-                    1:
-                        physInvRecord.Validate("BC Quantity 1", bcInv.Qte);
-                    2:
-                        begin
-                            physInvRecord.Validate("BC Quantity 2", bcInv.Qte);
-                            
-                        end;
-
-                    3:
-                        physInvRecord.Validate("BC Quantity 3", bcInv.Qte);
-                end;*/
-                physInvOrder.Get(user.Enregistrement, physInvRecord."Line No.");
-                physInvOrder."Location Code" := adcs."STF Location";
-                physInvOrder."Bin Code" := bcInv.Emplacement;
-                physInvOrder."Variant Code" := physInvRecord."Variant Code";
-                physInvOrder."Qty. Exp. Calculated" := true;
-                physInvRecord."Location Code" := adcs."STF Location";
-                physInvRecord.Recorded := true;
-                physInvRecord."Bin Code" := bcInv.Emplacement;
-                physInvRecord.Modify();
-                physInvOrder.Modify();
-            end;
-        end;
-
-        physInvRecord.Reset();
-        physInvRecord.SetRange("Order No.", invSave);
-        physInvRecord.SetRange("Recording No.", USER.no);
-        bcInv.Reset();
-        bcInv.SetRange("Document No.", invSave);
-        bcInv.SetRange(user, us);
-        bcInv.SetRange(Enregistrement, USER.no);
-
+        Message('Inventaire validé avec succès.');
     end;
 
     procedure Login(): Text
@@ -597,11 +544,12 @@ page 76007 "CB Inventaire"
     var
         US: Record "CB USER";
         out: Text;
-        enrt: record "Phys. Invt. Record Header";
         comptage: text;
         adcs: record "ADCS User";
+        batchName: Text;
+        InvMgt: Codeunit "CB Inventory Mgt";
     begin
-        adcs.get(usname);
+        adcs.Get(usname);
         US.Reset();
         US.SetRange(User, usname);
         out := '<!DOCTYPE html><html><script>function call(){ if (event.keyCode === 13) { go(); } } </script> </script> <head> <meta name="viewport" content="width=device-width, initial-scale=1"> <style>label{font-size:12px;} body {font-family: Arial, Helvetica, sans-serif;} form {border: 3px solid #f1f1f1;} input[type=text], input[type=password] { width: 100%; padding: 2px 4px; margin: 2px 0; display: inline-block; border: 1px solid #ccc; box-sizing: border-box;font-size:10px; } select{ width: 100%; padding: 12px 20px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; box-sizing: border-box; } button { background-color: #04AA6D; color: white; padding: 15px 20px; margin: 8px 0; border: none; cursor: pointer; width: 100%; } button:hover { opacity: 0.8; } .cancelbtn { width: auto; padding: 10px 18px; background-color: #f44336; } .imgcontainer { text-align: center; margin: 24px 0 12px 0; } img.avatar { width: 40%; border-radius: 50%; } .container { padding: 16px; } span.psw { float: right; padding-top: 16px; } /* Change styles for span and cancel button on extra small screens */ @media screen and (max-width: 1000px) { span.psw { display: block; float: none; } .cancelbtn { width: 100%; } } </style> </head> ';
@@ -612,22 +560,17 @@ page 76007 "CB Inventaire"
         out += '<option ></option>';
         if US.FindSet() then
             repeat
-                enrt.Reset();
-                enrt.SetRange("Order No.", US.Enregistrement);
-                enrt.SetRange("Recording No.", US.no);
-                if enrt.FindSet() then begin
+                batchName := '';
+                case US."CB Inv. Journal Type" of
+                    US."CB Inv. Journal Type"::"Feuille Entrepôt":
+                        batchName := US."CB Whse. Inv. Jnl Batch";
+                    US."CB Inv. Journal Type"::"Feuille Article":
+                        batchName := US."CB Inv. Journal Batch";
+                end;
 
-                    case enrt."DLT Counting No." of
-                        enrt."DLT Counting No."::"First Counting":
-                            comptage := '1';
-                        enrt."DLT Counting No."::"Second Counting":
-                            comptage := '2';
-                        else
-                            comptage := '3';
-                    end;
-
-                    out += '<option value="' + US.User + '/' + adcs."STF Location" + '/' + US.Enregistrement + '/' + Format(US.no) + '/' + comptage + '">' + US.User + '/' + adcs."STF Location" + '/' + US.Enregistrement + '/' + Format(US.no) + '/' + comptage + '</option>';
-
+                if batchName <> '' then begin
+                    comptage := Format(US."CB Comptage");
+                    out += '<option value="' + US.User + '/' + adcs."STF Location" + '/' + batchName + '/' + Format(US."CB Comptage") + '/' + comptage + '">' + US.User + '/' + adcs."STF Location" + '/' + batchName + '/' + Format(US."CB Comptage") + '/' + comptage + '</option>';
                 end;
             until US.Next() = 0;
 
@@ -736,76 +679,266 @@ page 76007 "CB Inventaire"
 
     local procedure MAJOrderRecordLine(inv2: Record "CB Historique Scan")
     var
-        recordLine: Record "Phys. Invt. Record Line";
-        rl: Record "Phys. Invt. Record Line";
-        a: integer;
-
-        allRecordLine: Record "Phys. Invt. Record Line";
-        orderLine: Record "Phys. Invt. Order Line";
-        orderLine2: Record "Phys. Invt. Order Line";
-        allOrderLine: Record "Phys. Invt. Order Line";
-        binContent: Record "Bin Content";
+        Location: Record Location;
     begin
-        //recordLine.Reset();
-        recordLine.SetCurrentKey("Order No.", "Recording No.", "Item No.", "Bin Code", "Location Code");
-        recordLine.SetRange("Order No.", inv2."Document No.");
-        recordLine.SetRange("Recording No.", inv2.Enregistrement);
-        recordLine.SetRange("Item No.", inv2.article);
-        recordLine.SetRange("Bin Code", inv2.Emplacement);
-        recordLine.SetRange("Location Code", inv2.Magasin);
-        if recordLine.Find('-') then begin
-            recordLine.Validate("Quantity", inv2.Qte + old_quantity);
-            recordLine.Modify();
-        end
-        else begin
-            if compsave <> '1' then
-                error('L''article n''existe pas dans l''enregistrement inventaire');
+        if not Location.Get(inv2.Magasin) then
+            Error('Magasin %1 introuvable.', inv2.Magasin);
 
-            //allRecordLine.Reset();
-            allRecordLine.SetRange("Order No.", inv2."Document No.");
-            allRecordLine.SetRange("Recording No.", inv2.Enregistrement);
-            if allRecordLine.FindSet() then;
-            recordLine.Init();
-            recordLine."Order No." := inv2."Document No.";
-            recordLine."Recording No." := inv2.Enregistrement;
-            recordLine."Line No." += 10000 * (allRecordLine.count + 2);
-            recordLine.Validate("Item No.", inv2.article);
-            recordline.validate(Quantity, inv2.Qte + old_quantity);
-            recordLine."Bin Code" := inv2.Emplacement;
-            recordLine."Location Code" := inv2.Magasin;
-            recordLine.Insert();
-            //binContent.Reset();
-            binContent.SetRange("Item No.", inv2.article);
-            binContent.SetRange("Location Code", inv2.Magasin);
-            binContent.SetRange("Bin Code", inv2.Emplacement);
-            if binContent.FindFirst() then;
-            binContent.CalcFields("Quantity (Base)");
-            //allOrderLine.Reset();
-            orderLine2.Reset();
-            orderLine2.Setrange("Document No.", inv2."Document No.");
-            orderLine2.Setrange("Item No.", inv2.article);
-            orderLine2.Setrange("Bin Code", inv2.Emplacement);
-            if not orderLine2.FindSet() then begin
-                allOrderLine.SetRange("Document No.", inv2."Document No.");
-                if allOrderLine.Find('-') then;
-                orderLine."Document No." := inv2."Document No.";
-                orderLine."Line No." += 10000 * (allOrderLine.count + 2);
-                orderLine.Validate("Item No.", inv2.article);
-                orderLine."Bin Code" := inv2.Emplacement;
-                orderLine."Location Code" := inv2.Magasin;
-                orderLine.Validate("Qty. Expected (Base)", binContent."Quantity (Base)");
-                orderLine."Qty. Exp. Calculated" := true;
-                orderLine.Insert();
-                orderLine.CreateDimFromDefaultDim();
-                orderLine.Modify();
+        if Location."Directed Put-away and Pick" then
+            MAJWhseJournalLine(inv2)
+        else
+            MAJItemJournalLine(inv2);
+    end;
+
+    local procedure MAJWhseJournalLine(inv2: Record "CB Historique Scan")
+    var
+        InvMgt: Codeunit "CB Inventory Mgt";
+        WhseJnlLine: Record "Warehouse Journal Line";
+        ExistingWhseJnlLine: Record "Warehouse Journal Line";
+        WhseJnlBatch: Record "Warehouse Journal Batch";
+        NoSeriesMgt: Codeunit NoSeriesManagement;
+        TemplateName: Code[10];
+        LineNo: Integer;
+        ComptageNo: Integer;
+        FinalQty: Decimal;
+        DocNo: Code[20];
+        RegDate: Date;
+    begin
+        TemplateName := InvMgt.GetWhsePhysInvTemplateName();
+        Evaluate(ComptageNo, compSave);
+        FinalQty := inv2.Qte + old_quantity;
+
+        InvMgt.CheckAlreadyCountedWhse(TemplateName, invSave, inv2.Magasin, inv2.article, inv2.Emplacement, ComptageNo);
+
+        WhseJnlLine.Reset();
+        WhseJnlLine.SetRange("Journal Template Name", TemplateName);
+        WhseJnlLine.SetRange("Journal Batch Name", invSave);
+        WhseJnlLine.SetRange("Location Code", inv2.Magasin);
+        WhseJnlLine.SetRange("Item No.", inv2.article);
+        WhseJnlLine.SetRange("Bin Code", inv2.Emplacement);
+        if WhseJnlLine.FindFirst() then begin
+            SetWhseComptageQty(WhseJnlLine, ComptageNo, FinalQty);
+            WhseJnlLine.Validate("Qty. (Phys. Inventory)", FinalQty);
+            WhseJnlLine.Modify(true);
+        end else begin
+            DocNo := '';
+            RegDate := Today;
+            ExistingWhseJnlLine.Reset();
+            ExistingWhseJnlLine.SetRange("Journal Template Name", TemplateName);
+            ExistingWhseJnlLine.SetRange("Journal Batch Name", invSave);
+            if ExistingWhseJnlLine.FindLast() then begin
+                LineNo := ExistingWhseJnlLine."Line No." + 10000;
+                if ExistingWhseJnlLine."Registering Date" <> 0D then
+                    RegDate := ExistingWhseJnlLine."Registering Date";
+                if ExistingWhseJnlLine."Whse. Document No." <> '' then
+                    DocNo := ExistingWhseJnlLine."Whse. Document No.";
+            end else begin
+                LineNo := 10000;
+                if WhseJnlBatch.Get(TemplateName, invSave, inv2.Magasin) then
+                    if WhseJnlBatch."Registering No. Series" <> '' then
+                        DocNo := NoSeriesMgt.GetNextNo(WhseJnlBatch."Registering No. Series", RegDate, false);
             end;
+
+            WhseJnlLine.Init();
+            WhseJnlLine."Journal Template Name" := TemplateName;
+            WhseJnlLine."Journal Batch Name" := invSave;
+            WhseJnlLine."Line No." := LineNo;
+            WhseJnlLine.Validate("Registering Date", RegDate);
+            WhseJnlLine.Validate("Entry Type", WhseJnlLine."Entry Type"::"Positive Adjmt.");
+            if DocNo <> '' then
+                WhseJnlLine.Validate("Whse. Document No.", DocNo);
+            WhseJnlLine.Validate("Location Code", inv2.Magasin);
+            WhseJnlLine.Validate("Item No.", inv2.article);
+            WhseJnlLine."From Bin Code" := GetAdjustmentBinCode(inv2.Magasin);
+            WhseJnlLine."From Zone Code" := GetBinZoneCode(inv2.Magasin, WhseJnlLine."From Bin Code");
+            WhseJnlLine."From Bin Type Code" := GetBinTypeCode(inv2.Magasin, WhseJnlLine."From Bin Code");
+            WhseJnlLine.Validate("To Zone Code", GetBinZoneCode(inv2.Magasin, inv2.Emplacement));
+            WhseJnlLine.Validate("To Bin Code", inv2.Emplacement);
+            WhseJnlLine.Validate("Zone Code", GetBinZoneCode(inv2.Magasin, inv2.Emplacement));
+            WhseJnlLine.Validate("Bin Code", inv2.Emplacement);
+            WhseJnlLine."Phys. Inventory" := true;
+            WhseJnlLine."Whse. Document Type" := WhseJnlLine."Whse. Document Type"::"Whse. Phys. Inventory";
+            SetWhseComptageQty(WhseJnlLine, ComptageNo, FinalQty);
+            WhseJnlLine.Validate("Qty. (Phys. Inventory)", FinalQty);
+            WhseJnlLine.Insert(true);
         end;
-        RL.SetRange("Order No.", invSave);
-        RL.SetFilter("Recording No.", enregistrementSave);
-        RL.setrange(Recorded, false);
-        if rl.FindSet() then
-            a := RL.Count;
+
+        UpdateNonScannedCount();
+    end;
+
+    local procedure MAJItemJournalLine(inv2: Record "CB Historique Scan")
+    var
+        InvMgt: Codeunit "CB Inventory Mgt";
+        ItemJnlLine: Record "Item Journal Line";
+        ExistingItemJnlLine: Record "Item Journal Line";
+        ItemJnlBatch: Record "Item Journal Batch";
+        NoSeriesMgt: Codeunit NoSeriesManagement;
+        TemplateName: Code[10];
+        LineNo: Integer;
+        ComptageNo: Integer;
+        FinalQty: Decimal;
+        DocNo: Code[20];
+        PostingDate: Date;
+    begin
+        TemplateName := InvMgt.GetItemPhysInvTemplateName();
+        Evaluate(ComptageNo, compSave);
+        FinalQty := inv2.Qte + old_quantity;
+
+        InvMgt.CheckAlreadyCountedItem(TemplateName, invSave, inv2.Magasin, inv2.article, inv2.Emplacement, ComptageNo);
+
+        ItemJnlLine.Reset();
+        ItemJnlLine.SetRange("Journal Template Name", TemplateName);
+        ItemJnlLine.SetRange("Journal Batch Name", invSave);
+        ItemJnlLine.SetRange("Location Code", inv2.Magasin);
+        ItemJnlLine.SetRange("Item No.", inv2.article);
+        if inv2.Emplacement <> '' then
+            ItemJnlLine.SetRange("Bin Code", inv2.Emplacement);
+        if ItemJnlLine.FindFirst() then begin
+            SetItemComptageQty(ItemJnlLine, ComptageNo, FinalQty);
+            ItemJnlLine.Validate("Qty. (Phys. Inventory)", FinalQty);
+            ItemJnlLine.Modify(true);
+        end else begin
+            DocNo := '';
+            PostingDate := Today;
+            ExistingItemJnlLine.Reset();
+            ExistingItemJnlLine.SetRange("Journal Template Name", TemplateName);
+            ExistingItemJnlLine.SetRange("Journal Batch Name", invSave);
+            if ExistingItemJnlLine.FindLast() then begin
+                LineNo := ExistingItemJnlLine."Line No." + 10000;
+                if ExistingItemJnlLine."Posting Date" <> 0D then
+                    PostingDate := ExistingItemJnlLine."Posting Date";
+                if ExistingItemJnlLine."Document No." <> '' then
+                    DocNo := ExistingItemJnlLine."Document No.";
+            end else begin
+                LineNo := 10000;
+                if ItemJnlBatch.Get(TemplateName, invSave) then
+                    if ItemJnlBatch."No. Series" <> '' then
+                        DocNo := NoSeriesMgt.GetNextNo(ItemJnlBatch."No. Series", PostingDate, false);
+            end;
+
+            ItemJnlLine.Init();
+            ItemJnlLine."Journal Template Name" := TemplateName;
+            ItemJnlLine."Journal Batch Name" := invSave;
+            ItemJnlLine."Line No." := LineNo;
+            ItemJnlLine.Validate("Entry Type", ItemJnlLine."Entry Type"::"Positive Adjmt.");
+            ItemJnlLine.Validate("Posting Date", PostingDate);
+            if DocNo <> '' then
+                ItemJnlLine.Validate("Document No.", DocNo)
+            else
+                ItemJnlLine.Validate("Document No.", invSave);
+            ItemJnlLine.Validate("Item No.", inv2.article);
+            ItemJnlLine.Validate("Location Code", inv2.Magasin);
+            if inv2.Emplacement <> '' then
+                ItemJnlLine.Validate("Bin Code", inv2.Emplacement);
+            ItemJnlLine."Phys. Inventory" := true;
+            SetItemComptageQty(ItemJnlLine, ComptageNo, FinalQty);
+            ItemJnlLine.Validate("Qty. (Phys. Inventory)", FinalQty);
+            ItemJnlLine.Insert(true);
+        end;
+
+        UpdateNonScannedCount();
+    end;
+
+    local procedure SetWhseComptageQty(var WhseJnlLine: Record "Warehouse Journal Line"; ComptageNo: Integer; Quantity: Decimal)
+    begin
+        case ComptageNo of
+            1:
+                begin
+                    WhseJnlLine."CB Comptage 1" := Quantity;
+                    WhseJnlLine."CB Comptage Actif" := 1;
+                end;
+            2:
+                begin
+                    WhseJnlLine."CB Comptage 2" := Quantity;
+                    WhseJnlLine."CB Comptage Actif" := 2;
+                end;
+            3:
+                begin
+                    WhseJnlLine."CB Comptage 3" := Quantity;
+                    WhseJnlLine."CB Comptage Actif" := 3;
+                end;
+        end;
+    end;
+
+    local procedure SetItemComptageQty(var ItemJnlLine: Record "Item Journal Line"; ComptageNo: Integer; Quantity: Decimal)
+    begin
+        case ComptageNo of
+            1:
+                begin
+                    ItemJnlLine."CB Comptage 1" := Quantity;
+                    ItemJnlLine."CB Comptage Actif" := 1;
+                end;
+            2:
+                begin
+                    ItemJnlLine."CB Comptage 2" := Quantity;
+                    ItemJnlLine."CB Comptage Actif" := 2;
+                end;
+            3:
+                begin
+                    ItemJnlLine."CB Comptage 3" := Quantity;
+                    ItemJnlLine."CB Comptage Actif" := 3;
+                end;
+        end;
+    end;
+
+    local procedure UpdateNonScannedCount()
+    var
+        WhseJnlLine: Record "Warehouse Journal Line";
+        ItemJnlLine: Record "Item Journal Line";
+        InvMgt: Codeunit "CB Inventory Mgt";
+        TemplateName: Code[10];
+        a: Integer;
+    begin
+        a := 0;
+        if InvMgt.IsDirectedPutAwayAndPick(magSave) then begin
+            TemplateName := InvMgt.GetWhsePhysInvTemplateName();
+            WhseJnlLine.Reset();
+            WhseJnlLine.SetRange("Journal Template Name", TemplateName);
+            WhseJnlLine.SetRange("Journal Batch Name", invSave);
+            WhseJnlLine.SetRange("Location Code", magSave);
+            WhseJnlLine.SetRange("CB Inventaire Validé", false);
+            WhseJnlLine.SetRange("CB Comptage 1", 0);
+            if WhseJnlLine.FindSet() then
+                a := WhseJnlLine.Count;
+        end else begin
+            TemplateName := InvMgt.GetItemPhysInvTemplateName();
+            ItemJnlLine.Reset();
+            ItemJnlLine.SetRange("Journal Template Name", TemplateName);
+            ItemJnlLine.SetRange("Journal Batch Name", invSave);
+            ItemJnlLine.SetRange("Location Code", magSave);
+            ItemJnlLine.SetRange("CB Inventaire Validé", false);
+            ItemJnlLine.SetRange("CB Comptage 1", 0);
+            if ItemJnlLine.FindSet() then
+                a := ItemJnlLine.Count;
+        end;
         CurrPage.html.nonscanned(Format(a));
+    end;
+
+    local procedure GetAdjustmentBinCode(LocationCode: Code[10]): Code[20]
+    var
+        Location: Record Location;
+    begin
+        if Location.Get(LocationCode) then
+            exit(Location."Adjustment Bin Code");
+        exit('');
+    end;
+
+    local procedure GetBinZoneCode(LocationCode: Code[10]; BinCode: Code[20]): Code[10]
+    var
+        Bin: Record Bin;
+    begin
+        if Bin.Get(LocationCode, BinCode) then
+            exit(Bin."Zone Code");
+        exit('');
+    end;
+
+    local procedure GetBinTypeCode(LocationCode: Code[10]; BinCode: Code[20]): Code[10]
+    var
+        Bin: Record Bin;
+    begin
+        if Bin.Get(LocationCode, BinCode) then
+            exit(Bin."Bin Type Code");
+        exit('');
     end;
 
     local procedure analyseScannedBin(cabv: Text) result: Text
